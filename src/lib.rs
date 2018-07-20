@@ -66,7 +66,9 @@ impl Toc {
             }
 
             if let Event::Start(Header(lvl)) = e {
-                current_header_level = Some(lvl);
+                if lvl < 3 {
+                    current_header_level = Some(lvl);
+                }
                 continue;
             }
             if let Event::End(Header(_)) = e {
