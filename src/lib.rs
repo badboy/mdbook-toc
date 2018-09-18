@@ -17,19 +17,21 @@ impl Preprocessor for Toc {
         "toc"
     }
 
-    fn run(&self, _ctx: &PreprocessorContext, book: &mut Book) -> Result<()> {
-        let mut res: Option<_> = None;
+    fn run(&self, _ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
+        let mut res = None;
         book.for_each_mut(|item: &mut BookItem| {
             if let Some(Err(_)) = res {
                 return;
             }
+
             if let BookItem::Chapter(ref mut chapter) = *item {
                 res = Some(Toc::add_toc(chapter).map(|md| {
                     chapter.content = md;
                 }));
             }
         });
-        res.unwrap_or(Ok(()))
+
+        res.unwrap_or(Ok(())).map(|_| book)
     }
 }
 
