@@ -67,7 +67,7 @@ fn add_toc(content: &str) -> Result<String> {
         }
 
         if let Event::Start(Header(lvl)) = e {
-            if lvl < 3 {
+            if lvl < 5 {
                 current_header_level = Some(lvl);
             }
             continue;
@@ -140,6 +140,7 @@ mod test {
 * [Header 2](#header-2)
   * [Header 2.1](#header-21)
   * [Header 2.2](#header-22)
+    * [Header 2.2.1](#header-221)
 
 # Header 1
 
