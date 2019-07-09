@@ -2,13 +2,13 @@ extern crate mdbook;
 extern crate pulldown_cmark;
 extern crate pulldown_cmark_to_cmark;
 
-use std::borrow::Cow;
 use mdbook::errors::{Error, Result};
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::{Event, Parser};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark_to_cmark::fmt::cmark;
+use pulldown_cmark::CowStr;
 
 pub struct Toc;
 
@@ -35,7 +35,7 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(i32, Cow<'a, str>)]) -> String {
+fn build_toc<'a>(toc: &[(i32, CowStr<'a>)]) -> String {
     let mut result = String::new();
 
     for (level, name) in toc {
@@ -57,7 +57,7 @@ fn add_toc(content: &str) -> Result<String> {
 
     for e in Parser::new(&content) {
         if let Event::Html(html) = e {
-            if html == "<!-- toc -->\n" {
+            if &*html == "<!-- toc -->\n" {
                 toc_found = true;
             }
             continue;
@@ -90,7 +90,7 @@ fn add_toc(content: &str) -> Result<String> {
 
     let events = Parser::new(&content).map(|e| {
         if let Event::Html(html) = e.clone() {
-            if html == "<!-- toc -->\n" {
+            if &*html == "<!-- toc -->\n" {
                 return toc_events.clone();
             }
         }
