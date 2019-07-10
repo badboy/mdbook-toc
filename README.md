@@ -1,6 +1,6 @@
 # mdbook-toc
 
-A preprocessor for [mdbook][] to add inline Table of Content support.
+A preprocessor for [mdbook][] to add inline Table of Contents support.
 
 [mdbook]: https://github.com/rust-lang-nursery/mdBook
 

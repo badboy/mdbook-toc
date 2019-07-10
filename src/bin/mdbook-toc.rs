@@ -13,7 +13,7 @@ use std::process;
 
 pub fn make_app() -> App<'static, 'static> {
     App::new("mdbook-toc")
-        .about("mdbook preprocessor to Table of Contents")
+        .about("mdbook preprocessor to add Table of Contents")
         .subcommand(
             SubCommand::with_name("supports")
                 .arg(Arg::with_name("renderer").required(true))
