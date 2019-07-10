@@ -3,7 +3,7 @@ name = "mdbook-toc"
 version = "0.1.0"
 authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
 description = "mdbook preprocessor to add Table of Contents"
-license = "MPL"
+license = "MPL-2.0"
 homepage = "https://github.com/badboy/mdbook-toc"
 repository = "https://github.com/badboy/mdbook-toc"
 
