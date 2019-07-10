@@ -17,34 +17,21 @@ into a Table of Contents based on all top- and second-level headings of the chap
 If you want to use only this preprocessor, install the tool:
 
 ```
-cargo install --git https://github.com/badboy/mdbook-toc
+cargo install mdbook-toc
 ```
 
-Finally, build your book:
+Add it as a preprocessor to your `book.toml`:
 
 ```
-mdbook-toc path/to/book
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
 ```
 
-### Programmatic use
+Finally, build your book as normal:
 
-You can also use this programmatically, e.g. in order to use multiple additional preprocessors.
-Add `mdbook-toc` as a dependency in your `Cargo.toml`:
-
-```toml
-[dependencies.mdbook-toc]
-git = "https://github.com/badboy/mdbook-toc"
 ```
-
-Then add it to your code:
-
-```rust
-extern crate mdbook_toc;
-
-// ...
-
-let mut book = MDBook::load(&book_dir)?;
-book.with_preprecessor(mdbook_toc::Toc);
+mdbook path/to/book
 ```
 
 ## License
