@@ -2,13 +2,13 @@ extern crate mdbook;
 extern crate pulldown_cmark;
 extern crate pulldown_cmark_to_cmark;
 
-use mdbook::errors::{Error, Result};
 use mdbook::book::{Book, BookItem, Chapter};
+use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
-use pulldown_cmark::{Event, Parser};
-use pulldown_cmark::Tag::*;
-use pulldown_cmark_to_cmark::fmt::cmark;
 use pulldown_cmark::CowStr;
+use pulldown_cmark::Tag::*;
+use pulldown_cmark::{Event, Parser};
+use pulldown_cmark_to_cmark::fmt::cmark;
 
 pub struct Toc;
 
@@ -39,7 +39,7 @@ fn build_toc<'a>(toc: &[(i32, CowStr<'a>)]) -> String {
     let mut result = String::new();
 
     for (level, name) in toc {
-        let width = 2*(level-1) as usize;
+        let width = 2 * (level - 1) as usize;
         let slug = mdbook::utils::normalize_id(&name);
         let entry = format!("{1:0$}* [{2}](#{3})\n", width, "", name, slug);
         result.push_str(&entry);
@@ -53,7 +53,7 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header_level : Option<i32> = None;
+    let mut current_header_level: Option<i32> = None;
 
     for e in Parser::new(&content) {
         if let Event::Html(html) = e {
@@ -88,20 +88,21 @@ fn add_toc(content: &str) -> Result<String> {
     let toc_events = build_toc(&toc_content);
     let toc_events = Parser::new(&toc_events).collect::<Vec<_>>();
 
-    let events = Parser::new(&content).map(|e| {
-        if let Event::Html(html) = e.clone() {
-            if &*html == "<!-- toc -->\n" {
-                return toc_events.clone();
+    let events = Parser::new(&content)
+        .map(|e| {
+            if let Event::Html(html) = e.clone() {
+                if &*html == "<!-- toc -->\n" {
+                    return toc_events.clone();
+                }
             }
-        }
-        vec![e]
-    }).flat_map(|e| e);
+            vec![e]
+        })
+        .flat_map(|e| e);
 
     cmark(events, &mut buf, None)
         .map(|_| buf)
         .map_err(|err| Error::from(format!("Markdown serialization failed: {}", err)))
 }
-
 
 impl Toc {
     fn add_toc(chapter: &mut Chapter) -> Result<String> {
