@@ -3,7 +3,7 @@ extern crate mdbook;
 extern crate mdbook_toc;
 extern crate serde_json;
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{crate_version, App, Arg, ArgMatches, SubCommand};
 use mdbook::errors::Error;
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use mdbook_toc::Toc;
@@ -13,6 +13,7 @@ use std::process;
 
 pub fn make_app() -> App<'static, 'static> {
     App::new("mdbook-toc")
+        .version(crate_version!())
         .about("mdbook preprocessor to add Table of Contents")
         .subcommand(
             SubCommand::with_name("supports")
