@@ -80,8 +80,13 @@ fn add_toc(content: &str) -> Result<String> {
             continue;
         }
 
-        if let Event::Text(header) = e {
-            toc_content.push((current_header_level.unwrap(), header));
+        match e {
+            Event::Text(header) => toc_content.push((current_header_level.unwrap(), header)),
+            Event::Code(code) => {
+                let text = format!("`{}`", code);
+                toc_content.push((current_header_level.unwrap(), text.into()));
+            }
+            _ => {} // Rest is unhandled
         }
     }
 
@@ -155,6 +160,40 @@ mod test {
 ## Header 2.2
 
 ### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn adds_toc_with_inline_code() {
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+# Header 1
+
+## `Header 1.1`
+
+# Header 2
+
+## Header 2.1
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [`Header 1.1`](#header-11)
+* [Header 2](#header-2)
+  * [Header 2.1](#header-21)
+
+
+# Header 1
+
+## `Header 1.1`
+
+# Header 2
+
+## Header 2.1"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
