@@ -1,7 +1,3 @@
-extern crate mdbook;
-extern crate pulldown_cmark;
-extern crate pulldown_cmark_to_cmark;
-
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
@@ -118,6 +114,7 @@ impl Toc {
 #[cfg(test)]
 mod test {
     use super::add_toc;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn adds_toc() {
@@ -147,7 +144,6 @@ mod test {
   * [Header 2.1](#header-21)
   * [Header 2.2](#header-22)
     * [Header 2.2.1](#header-221)
-
 
 # Header 1
 
@@ -185,7 +181,6 @@ mod test {
   * [`Header 1.1`](#header-11)
 * [Header 2](#header-2)
   * [Header 2.1](#header-21)
-
 
 # Header 1
 
