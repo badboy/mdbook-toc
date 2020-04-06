@@ -37,4 +37,4 @@ mdbook path/to/book
 ## License
 
 MPL. See [LICENSE](LICENSE).  
-Copyright (c) 2018 Jan-Erik Rediger <janerik@fnordig.de>
+Copyright (c) 2018-2020 Jan-Erik Rediger <janerik@fnordig.de>
