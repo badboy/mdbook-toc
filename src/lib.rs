@@ -35,7 +35,7 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(i32, CowStr<'a>)]) -> String {
+fn build_toc<'a>(toc: &[(u32, CowStr<'a>)]) -> String {
     let mut result = String::new();
 
     for (level, name) in toc {
@@ -53,7 +53,7 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header_level: Option<i32> = None;
+    let mut current_header_level: Option<u32> = None;
 
     for e in Parser::new(&content) {
         if let Event::Html(html) = e {
@@ -66,13 +66,13 @@ fn add_toc(content: &str) -> Result<String> {
             continue;
         }
 
-        if let Event::Start(Header(lvl)) = e {
+        if let Event::Start(Heading(lvl)) = e {
             if lvl < 5 {
                 current_header_level = Some(lvl);
             }
             continue;
         }
-        if let Event::End(Header(_)) = e {
+        if let Event::End(Heading(_)) = e {
             current_header_level = None;
             continue;
         }
