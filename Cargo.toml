@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-toc"
-version = "0.2.4-alpha.0"
+version = "0.2.4"
 authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
 description = "mdbook preprocessor to add Table of Contents"
 license = "MPL-2.0"
