@@ -3,7 +3,7 @@ use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::CowStr;
 use pulldown_cmark::Tag::*;
-use pulldown_cmark::{Event, Parser};
+use pulldown_cmark::{Event, Parser, Options};
 use pulldown_cmark_to_cmark::fmt::cmark;
 
 pub struct Toc;
@@ -51,7 +51,13 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_content = vec![];
     let mut current_header_level: Option<u32> = None;
 
-    for e in Parser::new(&content) {
+    let mut opts = Options::empty();
+    opts.insert(Options::ENABLE_TABLES);
+    opts.insert(Options::ENABLE_FOOTNOTES);
+    opts.insert(Options::ENABLE_STRIKETHROUGH);
+    opts.insert(Options::ENABLE_TASKLISTS);
+
+    for e in Parser::new_ext(&content, opts.clone()) {
         if let Event::Html(html) = e {
             if &*html == "<!-- toc -->\n" {
                 toc_found = true;
@@ -89,7 +95,7 @@ fn add_toc(content: &str) -> Result<String> {
     let toc_events = build_toc(&toc_content);
     let toc_events = Parser::new(&toc_events).collect::<Vec<_>>();
 
-    let events = Parser::new(&content)
+    let events = Parser::new_ext(&content, opts)
         .map(|e| {
             if let Event::Html(html) = e.clone() {
                 if &*html == "<!-- toc -->\n" {
@@ -189,6 +195,28 @@ mod test {
 # Header 2
 
 ## Header 2.1"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn leaves_tables_untouched() {
+        // Regression test.
+        // Previously we forgot to enable the same markdwon extensions as mdbook itself.
+
+        let content = r#"# Heading
+
+| Head 1 | Head 2 |
+|--------|--------|
+| Row 1  | Row 2  |
+"#;
+
+        // Markdown roundtripping removes some insignificant whitespace
+        let expected = r#"# Heading
+
+|Head 1|Head 2|
+|------|------|
+|Row 1|Row 2|"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
