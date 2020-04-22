@@ -4,7 +4,7 @@ use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::CowStr;
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Parser, Options};
-use pulldown_cmark_to_cmark::fmt::cmark;
+use pulldown_cmark_to_cmark::cmark;
 
 pub struct Toc;
 
