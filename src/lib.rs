@@ -1,7 +1,6 @@
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
-use pulldown_cmark::CowStr;
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Parser, Options};
 use pulldown_cmark_to_cmark::cmark;
@@ -31,7 +30,8 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(u32, CowStr<'a>)]) -> String {
+fn build_toc<'a>(toc: &[(u32, String)]) -> String {
+    log::trace!("ToC from {:?}", toc);
     let mut result = String::new();
 
     for (level, name) in toc {
@@ -49,6 +49,7 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
+    let mut current_header = vec![];
     let mut current_header_level: Option<u32> = None;
 
     let mut opts = Options::empty();
@@ -58,6 +59,8 @@ fn add_toc(content: &str) -> Result<String> {
     opts.insert(Options::ENABLE_TASKLISTS);
 
     for e in Parser::new_ext(&content, opts.clone()) {
+        log::trace!("Event: {:?}", e);
+
         if let Event::Html(html) = e {
             if &*html == "<!-- toc -->\n" {
                 toc_found = true;
@@ -75,7 +78,13 @@ fn add_toc(content: &str) -> Result<String> {
             continue;
         }
         if let Event::End(Heading(_)) = e {
-            current_header_level = None;
+            // Skip if this header is nested too deeply.
+            if let Some(level) = current_header_level.take() {
+                let header = current_header.join("");
+
+                current_header.clear();
+                toc_content.push((level, header));
+            }
             continue;
         }
         if current_header_level.is_none() {
@@ -83,17 +92,17 @@ fn add_toc(content: &str) -> Result<String> {
         }
 
         match e {
-            Event::Text(header) => toc_content.push((current_header_level.unwrap(), header)),
+            Event::Text(header) => current_header.push(header),
             Event::Code(code) => {
                 let text = format!("`{}`", code);
-                toc_content.push((current_header_level.unwrap(), text.into()));
+                current_header.push(text.into());
             }
             _ => {} // Rest is unhandled
         }
     }
 
-    let toc_events = build_toc(&toc_content);
-    let toc_events = Parser::new(&toc_events).collect::<Vec<_>>();
+    let toc = build_toc(&toc_content);
+    let toc_events = Parser::new(&toc).collect::<Vec<_>>();
 
     let events = Parser::new_ext(&content, opts)
         .map(|e| {
@@ -217,6 +226,55 @@ mod test {
 |Head 1|Head 2|
 |------|------|
 |Row 1|Row 2|"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn handles_inline_code() {
+        let _ = env_logger::builder().is_test(true).try_init();
+
+        // Regression test.
+        // Inline code in a header was broken up into multiple items.
+        // Also test for deeply nested headers.
+
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+# Header 1
+
+## Header 1.1
+
+### Header 1.1.1
+
+#### Header 1.1.1.1
+
+##### Header 1.1.1.1.1
+
+# Another header `with inline` code
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [Header 1.1](#header-11)
+    * [Header 1.1.1](#header-111)
+      * [Header 1.1.1.1](#header-1111)
+* [Another header `with inline` code](#another-header-with-inline-code)
+
+# Header 1
+
+## Header 1.1
+
+### Header 1.1.1
+
+#### Header 1.1.1.1
+
+##### Header 1.1.1.1.1
+
+# Another header `with inline` code"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
