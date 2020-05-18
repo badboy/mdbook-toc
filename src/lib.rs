@@ -3,7 +3,7 @@ use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Parser, Options};
-use pulldown_cmark_to_cmark::cmark;
+use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
 
 pub struct Toc;
 
@@ -115,7 +115,9 @@ fn add_toc(content: &str) -> Result<String> {
         })
         .flat_map(|e| e);
 
-    cmark(events, &mut buf, None)
+    let mut opts = COptions::default();
+    opts.newlines_after_codeblock = 1;
+    cmark_with_options(events, &mut buf, None, opts)
         .map(|_| buf)
         .map_err(|err| Error::from(format!("Markdown serialization failed: {}", err)))
 }
