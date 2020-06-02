@@ -2,7 +2,7 @@ use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
-use pulldown_cmark::{Event, Parser, Options};
+use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
 
 pub struct Toc;
@@ -33,6 +33,26 @@ impl Preprocessor for Toc {
 fn build_toc<'a>(toc: &[(u32, String)]) -> String {
     log::trace!("ToC from {:?}", toc);
     let mut result = String::new();
+
+    // "Normalize" header levels.
+    // If headers skip a level, we need to normalize them to avoid the skip.
+    // Otherwise the markdown render will escape nested levels.
+    //
+    // This is a rough approximation only.
+    let mut last_lower = 0;
+    let toc = toc.iter().map(|(lvl, name)| {
+        let lvl = *lvl;
+        let lvl = if last_lower + 1 == lvl {
+            last_lower = lvl;
+            lvl
+        } else if last_lower + 1 < lvl {
+            last_lower + 1
+        } else {
+            last_lower = lvl;
+            lvl
+        };
+        (lvl, name)
+    });
 
     for (level, name) in toc {
         let width = 2 * (level - 1) as usize;
@@ -277,6 +297,53 @@ mod test {
 ##### Header 1.1.1.1.1
 
 # Another header `with inline` code"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn multi_header_regression() {
+        let content = r#"# Main Summary
+
+<!-- toc -->
+
+# Introduction
+
+### Contents
+
+### Background and Caveats
+
+#### Test
+
+### Accessing the Data
+
+# Adding New Fields
+
+## User Preferences"#;
+
+        let expected = r#"# Main Summary
+
+* [Introduction](#introduction)
+  * [Contents](#contents)
+  * [Background and Caveats](#background-and-caveats)
+  * [Test](#test)
+  * [Accessing the Data](#accessing-the-data)
+* [Adding New Fields](#adding-new-fields)
+  * [User Preferences](#user-preferences)
+
+# Introduction
+
+### Contents
+
+### Background and Caveats
+
+#### Test
+
+### Accessing the Data
+
+# Adding New Fields
+
+## User Preferences"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
