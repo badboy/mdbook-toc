@@ -39,7 +39,13 @@ fn build_toc<'a>(toc: &[(u32, String)]) -> String {
     // Otherwise the markdown render will escape nested levels.
     //
     // This is a rough approximation only.
-    let mut last_lower = 0;
+    let mut toc_iter = toc.iter().peekable();
+
+    // Start from the level of the first header.
+    let mut last_lower = match toc_iter.peek() {
+        Some((lvl, _)) => *lvl,
+        None => 0
+    };
     let toc = toc.iter().map(|(lvl, name)| {
         let lvl = *lvl;
         let lvl = if last_lower + 1 == lvl {
@@ -344,6 +350,43 @@ mod test {
 # Adding New Fields
 
 ## User Preferences"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn multi_header_linear_regression_3() {
+        let content = r#"# Heading
+
+<!-- toc -->
+
+## Level 1.1
+### Level 1.1.1
+### Level 1.1.2
+## Level 1.2
+### Level 1.2.1
+
+text"#;
+
+    let expected = r#"# Heading
+
+* [Level 1.1](#level-11)
+  * [Level 1.1.1](#level-111)
+  * [Level 1.1.2](#level-112)
+* [Level 1.2](#level-12)
+  * [Level 1.2.1](#level-121)
+
+## Level 1.1
+
+### Level 1.1.1
+
+### Level 1.1.2
+
+## Level 1.2
+
+### Level 1.2.1
+
+text"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
