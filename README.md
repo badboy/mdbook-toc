@@ -6,7 +6,7 @@ A preprocessor for [mdbook][] to add inline Table of Contents support.
 
 It turns this:
 
-```
+```md
 <!-- toc -->
 ```
 
@@ -16,13 +16,13 @@ into a Table of Contents based on all top- and second-level headings of the chap
 
 If you want to use only this preprocessor, install the tool:
 
-```
+```sh
 cargo install mdbook-toc
 ```
 
 Add it as a preprocessor to your `book.toml`:
 
-```
+```toml
 [preprocessor.toc]
 command = "mdbook-toc"
 renderer = ["html"]
@@ -30,11 +30,25 @@ renderer = ["html"]
 
 Finally, build your book as normal:
 
-```
+```sh
 mdbook path/to/book
+```
+
+## Custom TOC marker
+
+The default marker is:
+```md
+<!-- toc -->
+```
+
+However that may not be everyone's favorite, if you wish to use a different such as the GitLab marker `[[_TOC_]]`, you must add the following settings to your `book.toml`.
+
+```toml
+[preprocessor.toc]
+marker = "[[_TOC_]]"
 ```
 
 ## License
 
-MPL. See [LICENSE](LICENSE).  
+MPL. See [LICENSE](LICENSE).
 Copyright (c) 2018-2020 Jan-Erik Rediger <janerik@fnordig.de>
