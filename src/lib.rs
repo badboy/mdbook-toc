@@ -4,23 +4,43 @@ use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
-
+use std::io::BufReader;
 pub struct Toc;
+
+static DEFAULT_MARKER: &str = "<!-- toc -->";
 
 impl Preprocessor for Toc {
     fn name(&self) -> &str {
         "toc"
     }
 
-    fn run(&self, _ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
+    fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         let mut res = None;
+        let toc_marker = if let Some(cfg) = ctx.config.get_preprocessor(self.name()) {
+            if let Some(marker) = cfg.get("marker") {
+                match marker.as_str() {
+                    Some(m) => m,
+                    None => {
+                        return Err(Error::from(format!(
+                            "Marker {:?} is not a valid string",
+                            marker
+                        )))
+                    }
+                }
+            } else {
+                DEFAULT_MARKER
+            }
+        } else {
+            DEFAULT_MARKER
+        };
+
         book.for_each_mut(|item: &mut BookItem| {
             if let Some(Err(_)) = res {
                 return;
             }
 
             if let BookItem::Chapter(ref mut chapter) = *item {
-                res = Some(Toc::add_toc(chapter).map(|md| {
+                res = Some(Toc::add_toc(chapter, &toc_marker).map(|md| {
                     chapter.content = md;
                 }));
             }
@@ -44,7 +64,7 @@ fn build_toc<'a>(toc: &[(u32, String)]) -> String {
     // Start from the level of the first header.
     let mut last_lower = match toc_iter.peek() {
         Some((lvl, _)) => *lvl,
-        None => 0
+        None => 0,
     };
     let toc = toc.iter().map(|(lvl, name)| {
         let lvl = *lvl;
@@ -70,7 +90,7 @@ fn build_toc<'a>(toc: &[(u32, String)]) -> String {
     result
 }
 
-fn add_toc(content: &str) -> Result<String> {
+fn add_toc(content: &str, marker: &str) -> Result<String> {
     let mut buf = String::with_capacity(content.len());
     let mut toc_found = false;
 
@@ -84,18 +104,41 @@ fn add_toc(content: &str) -> Result<String> {
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
 
-    for e in Parser::new_ext(&content, opts.clone()) {
-        log::trace!("Event: {:?}", e);
+    let mark: Vec<Event> = Parser::new(marker).collect();
+    let mut mark_start = -1;
+    let mut mark_loc = 0;
+    let mut c = -1;
 
-        if let Event::Html(html) = e {
-            if &*html == "<!-- toc -->\n" {
-                toc_found = true;
-            }
-            continue;
-        }
+    for e in Parser::new_ext(&content, opts.clone()) {
+        c += 1;
+        log::trace!("Event: {:?}", e);
+        // println!("Event: {:?}", e);
         if !toc_found {
-            continue;
+            if e == mark[mark_loc] {
+                if mark_start == -1 {
+                    mark_start = c;
+                }
+                mark_loc += 1;
+                if mark_loc >= mark.len() {
+                    toc_found = true
+                }
+            } else if mark_loc > 0 {
+                mark_loc = 0;
+                mark_start = -1;
+            } else {
+                continue;
+            }
         }
+
+        // if let Event::Html(html) = e {
+        //     if &*html == marker {
+        //         toc_found = true;
+        //     }
+        //     continue;
+        // }
+        // if !toc_found {
+        //     continue;
+        // }
 
         if let Event::Start(Heading(lvl)) = e {
             if lvl < 5 {
@@ -130,14 +173,23 @@ fn add_toc(content: &str) -> Result<String> {
     let toc = build_toc(&toc_content);
     let toc_events = Parser::new(&toc).collect::<Vec<_>>();
 
+    let mut c = -1;
     let events = Parser::new_ext(&content, opts)
         .map(|e| {
-            if let Event::Html(html) = e.clone() {
-                if &*html == "<!-- toc -->\n" {
-                    return toc_events.clone();
-                }
+            c += 1;
+            if c > mark_start && c < mark_start + (mark.len() as i32) {
+                vec![]
+            } else if c == mark_start {
+                toc_events.clone()
+            } else {
+                vec![e]
             }
-            vec![e]
+            // if let Event::Html(html) = e.clone() {
+            //     if &*html == marker {
+            //         return toc_events.clone();
+            //     }
+            // }
+            // vec![e]
         })
         .flat_map(|e| e);
 
@@ -149,14 +201,14 @@ fn add_toc(content: &str) -> Result<String> {
 }
 
 impl Toc {
-    fn add_toc(chapter: &mut Chapter) -> Result<String> {
-        add_toc(&chapter.content)
+    fn add_toc(chapter: &mut Chapter, marker: &str) -> Result<String> {
+        add_toc(&chapter.content, marker)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::add_toc;
+    use super::{add_toc, DEFAULT_MARKER};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -200,7 +252,10 @@ mod test {
 
 ### Header 2.2.1"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
     }
 
     #[test]
@@ -233,7 +288,10 @@ mod test {
 
 ## Header 2.1"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
     }
 
     #[test]
@@ -255,7 +313,10 @@ mod test {
 |------|------|
 |Row 1|Row 2|"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
     }
 
     #[test]
@@ -304,7 +365,10 @@ mod test {
 
 # Another header `with inline` code"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
     }
 
     #[test]
@@ -351,7 +415,10 @@ mod test {
 
 ## User Preferences"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
     }
 
     #[test]
@@ -368,7 +435,7 @@ mod test {
 
 text"#;
 
-    let expected = r#"# Heading
+        let expected = r#"# Heading
 
 * [Level 1.1](#level-11)
   * [Level 1.1.1](#level-111)
@@ -388,6 +455,53 @@ text"#;
 
 text"#;
 
-        assert_eq!(expected, add_toc(content).unwrap());
+        assert_eq!(
+            expected,
+            add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
+        );
+    }
+    #[test]
+    fn add_toc_with_custom_marker() {
+        let marker = "[[_TOC_]]".to_owned();
+        let content = r#"# Chapter
+
+[[_TOC_]]
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [Header 1.1](#header-11)
+* [Header 2](#header-2)
+  * [Header 2.1](#header-21)
+  * [Header 2.2](#header-22)
+    * [Header 2.2.1](#header-221)
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content, &marker).unwrap());
     }
 }
