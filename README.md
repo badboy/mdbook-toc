@@ -48,6 +48,25 @@ However that may not be everyone's favorite, if you wish to use a different such
 marker = "[[_TOC_]]"
 ```
 
+And for an example with the GitHub marker, which is:
+```md
+* auto-gen TOC;
+{:toc}
+```
+
+The setting is:
+```toml
+[preprocessor.toc]
+marker = "* auto-gen TOC;\n{:toc}"
+```
+
+Or with multi-line strings
+```toml
+[preprocessor.toc]
+marker = """* auto-gen TOC;
+{:toc}"""
+```
+
 ## License
 
 MPL. See [LICENSE](LICENSE).

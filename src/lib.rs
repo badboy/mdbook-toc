@@ -4,7 +4,7 @@ use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
-use std::io::BufReader;
+
 pub struct Toc;
 
 static DEFAULT_MARKER: &str = "<!-- toc -->";
@@ -460,12 +460,59 @@ text"#;
             add_toc(content, &format!("{}\n", DEFAULT_MARKER)).unwrap()
         );
     }
+
     #[test]
-    fn add_toc_with_custom_marker() {
+    fn add_toc_with_gitlab_marker() {
         let marker = "[[_TOC_]]".to_owned();
         let content = r#"# Chapter
 
 [[_TOC_]]
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [Header 1.1](#header-11)
+* [Header 2](#header-2)
+  * [Header 2.1](#header-21)
+  * [Header 2.2](#header-22)
+    * [Header 2.2.1](#header-221)
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content, &marker).unwrap());
+    }
+
+    #[test]
+    fn add_toc_with_github_marker() {
+        let marker = "* auto-gen TOC:\n{:toc}".to_owned();
+        let content = r#"# Chapter
+
+* auto-gen TOC:
+{:toc}
 
 # Header 1
 
