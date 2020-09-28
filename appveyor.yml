@@ -33,7 +33,7 @@ test_script:
     )
 
 before_deploy:
-  - cargo rustc --target %TARGET% --release --bin mdbook-toc -- -C lto
+  - cargo rustc --target %TARGET% --release --bin mdbook-toc
   - ps: ci\before_deploy.ps1
 
 deploy:
