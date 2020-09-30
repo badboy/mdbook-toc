@@ -69,5 +69,5 @@ marker = """* auto-gen TOC;
 
 ## License
 
-MPL. See [LICENSE](LICENSE).
+MPL. See [LICENSE](LICENSE).  
 Copyright (c) 2018-2020 Jan-Erik Rediger <janerik@fnordig.de>

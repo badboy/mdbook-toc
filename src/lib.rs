@@ -4,6 +4,7 @@ use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
+use std::cmp::Ordering;
 
 pub struct Toc;
 
@@ -50,7 +51,7 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(u32, String)]) -> String {
+fn build_toc(toc: &[(u32, String)]) -> String {
     log::trace!("ToC from {:?}", toc);
     let mut result = String::new();
 
@@ -68,14 +69,12 @@ fn build_toc<'a>(toc: &[(u32, String)]) -> String {
     };
     let toc = toc.iter().map(|(lvl, name)| {
         let lvl = *lvl;
-        let lvl = if last_lower + 1 == lvl {
-            last_lower = lvl;
-            lvl
-        } else if last_lower + 1 < lvl {
-            last_lower + 1
-        } else {
-            last_lower = lvl;
-            lvl
+        let lvl = match lvl.cmp(&(last_lower + 1)) {
+            Ordering::Equal | Ordering::Less => {
+                last_lower = lvl;
+                lvl
+            }
+            Ordering::Greater => last_lower + 1,
         };
         (lvl, name)
     });
@@ -109,10 +108,9 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
     let mut mark_loc = 0;
     let mut c = -1;
 
-    for e in Parser::new_ext(&content, opts.clone()) {
+    for e in Parser::new_ext(&content, opts) {
         c += 1;
         log::trace!("Event: {:?}", e);
-        // println!("Event: {:?}", e);
         if !toc_found {
             if e == mark[mark_loc] {
                 if mark_start == -1 {
@@ -129,16 +127,6 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
                 continue;
             }
         }
-
-        // if let Event::Html(html) = e {
-        //     if &*html == marker {
-        //         toc_found = true;
-        //     }
-        //     continue;
-        // }
-        // if !toc_found {
-        //     continue;
-        // }
 
         if let Event::Start(Heading(lvl)) = e {
             if lvl < 5 {
@@ -191,7 +179,7 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
             // }
             // vec![e]
         })
-        .flat_map(|e| e);
+        .flatten();
 
     let mut opts = COptions::default();
     opts.newlines_after_codeblock = 1;
