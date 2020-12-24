@@ -64,8 +64,7 @@ fn build_toc<'a>(toc: &[(u32, String, String)]) -> String {
 
     for (level, name, slug) in toc {
         let width = 2 * (level - 1) as usize;
-        let entry = format!("{1:0$}* [{2}](#{3})\n", width, "", name, slug);
-        result.push_str(&entry);
+        writeln!(result, "{1:0$}* [{2}](#{3})", width, "", name, slug).unwrap();
     }
 
     result
@@ -76,7 +75,7 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header = vec![];
+    let mut current_header = String::new();
     let mut current_header_level: Option<u32> = None;
     let mut id_counter = HashMap::new();
 
@@ -106,14 +105,14 @@ fn add_toc(content: &str) -> Result<String> {
         if let Event::End(Heading(_)) = e {
             // Skip if this header is nested too deeply.
             if let Some(level) = current_header_level.take() {
-                let header = current_header.join("");
+                let header = current_header.clone();
                 let mut slug = mdbook::utils::normalize_id(&header);
                 let id_count = id_counter.entry(header.clone()).or_insert(0);
 
                 // Append unique ID if multiple headers with the same name exist
                 // to follow what mdBook does
                 if *id_count > 0 {
-                    write!(slug, "-{}", id_count)?;
+                    write!(slug, "-{}", id_count).unwrap();
                 }
 
                 *id_count += 1;
@@ -131,11 +130,8 @@ fn add_toc(content: &str) -> Result<String> {
         }
 
         match e {
-            Event::Text(header) => current_header.push(header),
-            Event::Code(code) => {
-                let text = format!("`{}`", code);
-                current_header.push(text.into());
-            }
+            Event::Text(header) => write!(current_header, "{}", header).unwrap(),
+            Event::Code(code) => write!(current_header, "`{}`", code).unwrap(),
             _ => {} // Rest is unhandled
         }
     }
