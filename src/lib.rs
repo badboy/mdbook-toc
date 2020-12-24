@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Write;
 use mdbook::book::{Book, BookItem, Chapter};
@@ -32,7 +33,7 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(u32, String, String)]) -> String {
+fn build_toc(toc: &[(u32, String, String)]) -> String {
     log::trace!("ToC from {:?}", toc);
     let mut result = String::new();
 
@@ -50,14 +51,12 @@ fn build_toc<'a>(toc: &[(u32, String, String)]) -> String {
     };
     let toc = toc.iter().map(|(lvl, name, slug)| {
         let lvl = *lvl;
-        let lvl = if last_lower + 1 == lvl {
-            last_lower = lvl;
-            lvl
-        } else if last_lower + 1 < lvl {
-            last_lower + 1
-        } else {
-            last_lower = lvl;
-            lvl
+        let lvl = match (last_lower + 1).cmp(&lvl) {
+            Ordering::Less => last_lower + 1,
+            _ => {
+                last_lower = lvl;
+                lvl
+            }
         };
         (lvl, name, slug)
     });
@@ -85,7 +84,7 @@ fn add_toc(content: &str) -> Result<String> {
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
 
-    for e in Parser::new_ext(&content, opts.clone()) {
+    for e in Parser::new_ext(&content, opts) {
         log::trace!("Event: {:?}", e);
 
         if let Event::Html(html) = e {
@@ -148,10 +147,9 @@ fn add_toc(content: &str) -> Result<String> {
             }
             vec![e]
         })
-        .flat_map(|e| e);
+        .flatten();
 
-    let mut opts = COptions::default();
-    opts.newlines_after_codeblock = 1;
+    let opts = COptions { newlines_after_codeblock: 1, ..Default::default() };
     cmark_with_options(events, &mut buf, None, opts)
         .map(|_| buf)
         .map_err(|err| Error::msg(format!("Markdown serialization failed: {}", err)))
