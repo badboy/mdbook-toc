@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::Write;
 
 use mdbook::book::{Book, BookItem, Chapter};
@@ -8,10 +9,50 @@ use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
+use toml::value::Table;
 
 pub struct Toc;
 
 static DEFAULT_MARKER: &str = "<!-- toc -->\n";
+
+struct Config {
+    marker: String,
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        Config {
+            marker: DEFAULT_MARKER.into(),
+        }
+    }
+}
+
+impl<'a> TryFrom<Option<&'a Table>> for Config {
+    type Error = Error;
+
+    fn try_from(mdbook_cfg: Option<&Table>) -> Result<Config> {
+        let mut cfg = Config::default();
+        let mdbook_cfg = match mdbook_cfg {
+            Some(c) => c,
+            None => return Ok(cfg),
+        };
+
+        if let Some(marker) = mdbook_cfg.get("marker") {
+            let marker = match marker.as_str() {
+                Some(m) => m,
+                None => {
+                    return Err(Error::msg(format!(
+                        "Marker {:?} is not a valid string",
+                        marker
+                    )))
+                }
+            };
+            cfg.marker = marker.into();
+        }
+
+        Ok(cfg)
+    }
+}
 
 impl Preprocessor for Toc {
     fn name(&self) -> &str {
@@ -20,23 +61,7 @@ impl Preprocessor for Toc {
 
     fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         let mut res = None;
-        let toc_marker = if let Some(cfg) = ctx.config.get_preprocessor(self.name()) {
-            if let Some(marker) = cfg.get("marker") {
-                match marker.as_str() {
-                    Some(m) => m,
-                    None => {
-                        return Err(Error::msg(format!(
-                            "Marker {:?} is not a valid string",
-                            marker
-                        )))
-                    }
-                }
-            } else {
-                DEFAULT_MARKER
-            }
-        } else {
-            DEFAULT_MARKER
-        };
+        let cfg = ctx.config.get_preprocessor(self.name()).try_into()?;
 
         book.for_each_mut(|item: &mut BookItem| {
             if let Some(Err(_)) = res {
@@ -44,7 +69,7 @@ impl Preprocessor for Toc {
             }
 
             if let BookItem::Chapter(ref mut chapter) = *item {
-                res = Some(Toc::add_toc(chapter, &toc_marker).map(|md| {
+                res = Some(Toc::add_toc(chapter, &cfg.marker).map(|md| {
                     chapter.content = md;
                 }));
             }
