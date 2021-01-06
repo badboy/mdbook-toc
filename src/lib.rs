@@ -17,12 +17,14 @@ static DEFAULT_MARKER: &str = "<!-- toc -->\n";
 
 struct Config {
     marker: String,
+    max_level: u32,
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
             marker: DEFAULT_MARKER.into(),
+            max_level: 4,
         }
     }
 }
@@ -48,6 +50,19 @@ impl<'a> TryFrom<Option<&'a Table>> for Config {
                 }
             };
             cfg.marker = marker.into();
+        }
+
+        if let Some(level) = mdbook_cfg.get("max-level") {
+            let level = match level.as_integer() {
+                Some(l) => l,
+                None => {
+                    return Err(Error::msg(format!(
+                        "Level {:?} is not a valid integer",
+                        level
+                    )))
+                }
+            };
+            cfg.max_level = level.try_into()?;
         }
 
         Ok(cfg)
