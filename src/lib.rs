@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt::Write;
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
@@ -30,7 +33,7 @@ impl Preprocessor for Toc {
     }
 }
 
-fn build_toc<'a>(toc: &[(u32, String)]) -> String {
+fn build_toc(toc: &[(u32, String, String)]) -> String {
     log::trace!("ToC from {:?}", toc);
     let mut result = String::new();
 
@@ -43,28 +46,24 @@ fn build_toc<'a>(toc: &[(u32, String)]) -> String {
 
     // Start from the level of the first header.
     let mut last_lower = match toc_iter.peek() {
-        Some((lvl, _)) => *lvl,
+        Some((lvl, _, _)) => *lvl,
         None => 0
     };
-    let toc = toc.iter().map(|(lvl, name)| {
+    let toc = toc.iter().map(|(lvl, name, slug)| {
         let lvl = *lvl;
-        let lvl = if last_lower + 1 == lvl {
-            last_lower = lvl;
-            lvl
-        } else if last_lower + 1 < lvl {
-            last_lower + 1
-        } else {
-            last_lower = lvl;
-            lvl
+        let lvl = match (last_lower + 1).cmp(&lvl) {
+            Ordering::Less => last_lower + 1,
+            _ => {
+                last_lower = lvl;
+                lvl
+            }
         };
-        (lvl, name)
+        (lvl, name, slug)
     });
 
-    for (level, name) in toc {
+    for (level, name, slug) in toc {
         let width = 2 * (level - 1) as usize;
-        let slug = mdbook::utils::normalize_id(&name);
-        let entry = format!("{1:0$}* [{2}](#{3})\n", width, "", name, slug);
-        result.push_str(&entry);
+        writeln!(result, "{1:0$}* [{2}](#{3})", width, "", name, slug).unwrap();
     }
 
     result
@@ -75,8 +74,9 @@ fn add_toc(content: &str) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header = vec![];
+    let mut current_header = String::new();
     let mut current_header_level: Option<u32> = None;
+    let mut id_counter = HashMap::new();
 
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_TABLES);
@@ -84,7 +84,7 @@ fn add_toc(content: &str) -> Result<String> {
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
 
-    for e in Parser::new_ext(&content, opts.clone()) {
+    for e in Parser::new_ext(&content, opts) {
         log::trace!("Event: {:?}", e);
 
         if let Event::Html(html) = e {
@@ -98,18 +98,29 @@ fn add_toc(content: &str) -> Result<String> {
         }
 
         if let Event::Start(Heading(lvl)) = e {
-            if lvl < 5 {
-                current_header_level = Some(lvl);
-            }
+            current_header_level = Some(lvl);
             continue;
         }
         if let Event::End(Heading(_)) = e {
             // Skip if this header is nested too deeply.
             if let Some(level) = current_header_level.take() {
-                let header = current_header.join("");
+                let header = current_header.clone();
+                let mut slug = mdbook::utils::normalize_id(&header);
+                let id_count = id_counter.entry(header.clone()).or_insert(0);
+
+                // Append unique ID if multiple headers with the same name exist
+                // to follow what mdBook does
+                if *id_count > 0 {
+                    write!(slug, "-{}", id_count).unwrap();
+                }
+
+                *id_count += 1;
+
+                if level < 5 {
+                    toc_content.push((level, header, slug));
+                }
 
                 current_header.clear();
-                toc_content.push((level, header));
             }
             continue;
         }
@@ -118,11 +129,8 @@ fn add_toc(content: &str) -> Result<String> {
         }
 
         match e {
-            Event::Text(header) => current_header.push(header),
-            Event::Code(code) => {
-                let text = format!("`{}`", code);
-                current_header.push(text.into());
-            }
+            Event::Text(header) => write!(current_header, "{}", header).unwrap(),
+            Event::Code(code) => write!(current_header, "`{}`", code).unwrap(),
             _ => {} // Rest is unhandled
         }
     }
@@ -139,10 +147,9 @@ fn add_toc(content: &str) -> Result<String> {
             }
             vec![e]
         })
-        .flat_map(|e| e);
+        .flatten();
 
-    let mut opts = COptions::default();
-    opts.newlines_after_codeblock = 1;
+    let opts = COptions { newlines_after_codeblock: 1, ..Default::default() };
     cmark_with_options(events, &mut buf, None, opts)
         .map(|_| buf)
         .map_err(|err| Error::msg(format!("Markdown serialization failed: {}", err)))
@@ -387,6 +394,42 @@ text"#;
 ### Level 1.2.1
 
 text"#;
+
+        assert_eq!(expected, add_toc(content).unwrap());
+    }
+
+    #[test]
+    fn unique_slugs() {
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+## Duplicate
+
+### Duplicate
+
+#### Duplicate
+
+##### Duplicate
+
+## Duplicate"#;
+
+        let expected = r#"# Chapter
+
+* [Duplicate](#duplicate)
+  * [Duplicate](#duplicate-1)
+    * [Duplicate](#duplicate-2)
+* [Duplicate](#duplicate-4)
+
+## Duplicate
+
+### Duplicate
+
+#### Duplicate
+
+##### Duplicate
+
+## Duplicate"#;
 
         assert_eq!(expected, add_toc(content).unwrap());
     }
