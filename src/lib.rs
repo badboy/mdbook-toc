@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Write;
+
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
@@ -67,7 +68,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     // Start from the level of the first header.
     let mut last_lower = match toc_iter.peek() {
         Some((lvl, _, _)) => *lvl,
-        None => 0
+        None => 0,
     };
     let toc = toc.iter().map(|(lvl, name, slug)| {
         let lvl = *lvl;
@@ -190,7 +191,10 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
         })
         .flatten();
 
-    let opts = COptions { newlines_after_codeblock: 1, ..Default::default() };
+    let opts = COptions {
+        newlines_after_codeblock: 1,
+        ..Default::default()
+    };
     cmark_with_options(events, &mut buf, None, opts)
         .map(|_| buf)
         .map_err(|err| Error::msg(format!("Markdown serialization failed: {}", err)))
@@ -248,10 +252,7 @@ mod test {
 
 ### Header 2.2.1"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
@@ -284,10 +285,7 @@ mod test {
 
 ## Header 2.1"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
@@ -309,10 +307,7 @@ mod test {
 |------|------|
 |Row 1|Row 2|"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
@@ -361,10 +356,7 @@ mod test {
 
 # Another header `with inline` code"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
@@ -411,10 +403,7 @@ mod test {
 
 ## User Preferences"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
@@ -451,10 +440,7 @@ text"#;
 
 text"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
     }
 
     #[test]
