@@ -34,7 +34,9 @@ Finally, build your book as normal:
 mdbook path/to/book
 ```
 
-## Custom TOC marker
+## Configuration
+
+### Custom TOC marker
 
 The default marker is:
 
@@ -42,7 +44,7 @@ The default marker is:
 <!-- toc -->
 ```
 
-If you wish to use a different, such as the GitLab marker `[[_TOC_]]`, you must add the following settings to your `book.toml`.
+If you wish to use a different marker, such as the GitLab marker `[[_TOC_]]`, you must add the following settings to your `book.toml`.
 
 ```toml
 [preprocessor.toc]
@@ -69,6 +71,16 @@ or with multi-line strings:
 [preprocessor.toc]
 marker = """* auto-gen TOC;
 {:toc}"""
+```
+
+### Maximum header level
+
+By default the ToC will include headings up to level 4 (`####`).
+This can be configured in your `book.toml` as follows:
+
+```toml
+[preprocessor.toc]
+max-level = 4
 ```
 
 ## License

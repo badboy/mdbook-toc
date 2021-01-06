@@ -1,16 +1,73 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::Write;
+
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
 use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
+use toml::value::Table;
 
 pub struct Toc;
 
 static DEFAULT_MARKER: &str = "<!-- toc -->\n";
+
+struct Config {
+    marker: String,
+    max_level: u32,
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        Config {
+            marker: DEFAULT_MARKER.into(),
+            max_level: 4,
+        }
+    }
+}
+
+impl<'a> TryFrom<Option<&'a Table>> for Config {
+    type Error = Error;
+
+    fn try_from(mdbook_cfg: Option<&Table>) -> Result<Config> {
+        let mut cfg = Config::default();
+        let mdbook_cfg = match mdbook_cfg {
+            Some(c) => c,
+            None => return Ok(cfg),
+        };
+
+        if let Some(marker) = mdbook_cfg.get("marker") {
+            let marker = match marker.as_str() {
+                Some(m) => m,
+                None => {
+                    return Err(Error::msg(format!(
+                        "Marker {:?} is not a valid string",
+                        marker
+                    )))
+                }
+            };
+            cfg.marker = marker.into();
+        }
+
+        if let Some(level) = mdbook_cfg.get("max-level") {
+            let level = match level.as_integer() {
+                Some(l) => l,
+                None => {
+                    return Err(Error::msg(format!(
+                        "Level {:?} is not a valid integer",
+                        level
+                    )))
+                }
+            };
+            cfg.max_level = level.try_into()?;
+        }
+
+        Ok(cfg)
+    }
+}
 
 impl Preprocessor for Toc {
     fn name(&self) -> &str {
@@ -19,23 +76,7 @@ impl Preprocessor for Toc {
 
     fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         let mut res = None;
-        let toc_marker = if let Some(cfg) = ctx.config.get_preprocessor(self.name()) {
-            if let Some(marker) = cfg.get("marker") {
-                match marker.as_str() {
-                    Some(m) => m,
-                    None => {
-                        return Err(Error::msg(format!(
-                            "Marker {:?} is not a valid string",
-                            marker
-                        )))
-                    }
-                }
-            } else {
-                DEFAULT_MARKER
-            }
-        } else {
-            DEFAULT_MARKER
-        };
+        let cfg = ctx.config.get_preprocessor(self.name()).try_into()?;
 
         book.for_each_mut(|item: &mut BookItem| {
             if let Some(Err(_)) = res {
@@ -43,7 +84,7 @@ impl Preprocessor for Toc {
             }
 
             if let BookItem::Chapter(ref mut chapter) = *item {
-                res = Some(Toc::add_toc(chapter, &toc_marker).map(|md| {
+                res = Some(Toc::add_toc(chapter, &cfg).map(|md| {
                     chapter.content = md;
                 }));
             }
@@ -67,7 +108,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     // Start from the level of the first header.
     let mut last_lower = match toc_iter.peek() {
         Some((lvl, _, _)) => *lvl,
-        None => 0
+        None => 0,
     };
     let toc = toc.iter().map(|(lvl, name, slug)| {
         let lvl = *lvl;
@@ -89,7 +130,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     result
 }
 
-fn add_toc(content: &str, marker: &str) -> Result<String> {
+fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut buf = String::with_capacity(content.len());
     let mut toc_found = false;
 
@@ -104,7 +145,7 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
 
-    let mark: Vec<Event> = Parser::new(marker).collect();
+    let mark: Vec<Event> = Parser::new(&cfg.marker).collect();
     let mut mark_start = -1;
     let mut mark_loc = 0;
     let mut c = -1;
@@ -148,7 +189,7 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
 
                 *id_count += 1;
 
-                if level < 5 {
+                if level <= cfg.max_level {
                     toc_content.push((level, header, slug));
                 }
 
@@ -190,22 +231,41 @@ fn add_toc(content: &str, marker: &str) -> Result<String> {
         })
         .flatten();
 
-    let opts = COptions { newlines_after_codeblock: 1, ..Default::default() };
+    let opts = COptions {
+        newlines_after_codeblock: 1,
+        ..Default::default()
+    };
     cmark_with_options(events, &mut buf, None, opts)
         .map(|_| buf)
         .map_err(|err| Error::msg(format!("Markdown serialization failed: {}", err)))
 }
 
 impl Toc {
-    fn add_toc(chapter: &mut Chapter, marker: &str) -> Result<String> {
-        add_toc(&chapter.content, marker)
+    fn add_toc(chapter: &mut Chapter, cfg: &Config) -> Result<String> {
+        add_toc(&chapter.content, cfg)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{add_toc, DEFAULT_MARKER};
+    use super::{add_toc, Config};
     use pretty_assertions::assert_eq;
+
+    fn default<T: Default>() -> T {
+        Default::default()
+    }
+
+    fn with_marker<S: Into<String>>(marker: S) -> Config {
+        let mut cfg = Config::default();
+        cfg.marker = marker.into();
+        cfg
+    }
+
+    fn with_max_level(level: u32) -> Config {
+        let mut cfg = Config::default();
+        cfg.max_level = level;
+        cfg
+    }
 
     #[test]
     fn adds_toc() {
@@ -248,10 +308,7 @@ mod test {
 
 ### Header 2.2.1"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -284,10 +341,7 @@ mod test {
 
 ## Header 2.1"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -309,10 +363,7 @@ mod test {
 |------|------|
 |Row 1|Row 2|"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -361,10 +412,7 @@ mod test {
 
 # Another header `with inline` code"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -411,10 +459,7 @@ mod test {
 
 ## User Preferences"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -451,10 +496,7 @@ text"#;
 
 text"#;
 
-        assert_eq!(
-            expected,
-            add_toc(content, DEFAULT_MARKER).unwrap()
-        );
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -499,7 +541,7 @@ text"#;
 
 ### Header 2.2.1"#;
 
-        assert_eq!(expected, add_toc(content, &marker).unwrap());
+        assert_eq!(expected, add_toc(content, &with_marker(marker)).unwrap());
     }
 
     #[test]
@@ -535,7 +577,7 @@ text"#;
 
 ## Duplicate"#;
 
-        assert_eq!(expected, add_toc(content, DEFAULT_MARKER).unwrap());
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 
     #[test]
@@ -581,6 +623,93 @@ text"#;
 
 ### Header 2.2.1"#;
 
-        assert_eq!(expected, add_toc(content, &marker).unwrap());
+        assert_eq!(expected, add_toc(content, &with_marker(marker)).unwrap());
+    }
+
+    #[test]
+    fn lower_max_level() {
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [Header 1.1](#header-11)
+* [Header 2](#header-2)
+  * [Header 2.1](#header-21)
+  * [Header 2.2](#header-22)
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content, &with_max_level(2)).unwrap());
+    }
+
+    #[test]
+    fn higher_max_level() {
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Header 1](#header-1)
+  * [Header 1.1](#header-11)
+* [Header 2](#header-2)
+  * [Header 2.1](#header-21)
+  * [Header 2.2](#header-22)
+    * [Header 2.2.1](#header-221)
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content, &with_max_level(7)).unwrap());
     }
 }
