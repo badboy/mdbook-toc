@@ -154,6 +154,11 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         c += 1;
         log::trace!("Event: {:?}", e);
         if !toc_found {
+            log::trace!(
+                "TOC not found yet. Location: {}, Start: {}",
+                mark_loc,
+                mark_start
+            );
             if e == mark[mark_loc] {
                 if mark_start == -1 {
                     mark_start = c;
@@ -209,25 +214,20 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     }
 
     let toc = build_toc(&toc_content);
+    log::trace!("Built TOC: {:?}", toc);
     let toc_events = Parser::new(&toc).collect::<Vec<_>>();
 
     let mut c = -1;
     let events = Parser::new_ext(&content, opts)
         .map(|e| {
             c += 1;
-            if c > mark_start && c < mark_start + (mark.len() as i32) {
+            if toc_found && c > mark_start && c < mark_start + (mark.len() as i32) {
                 vec![]
-            } else if c == mark_start {
+            } else if toc_found && c == mark_start {
                 toc_events.clone()
             } else {
                 vec![e]
             }
-            // if let Event::Html(html) = e.clone() {
-            //     if &*html == marker {
-            //         return toc_events.clone();
-            //     }
-            // }
-            // vec![e]
         })
         .flatten();
 
@@ -711,5 +711,50 @@ text"#;
 ### Header 2.2.1"#;
 
         assert_eq!(expected, add_toc(content, &with_max_level(7)).unwrap());
+    }
+
+    // Regression test for [#13](https://github.com/badboy/mdbook-toc/issues/13).
+    // Choosing a non-HTML TOC marker breaks sites that don't use it at all,
+    // removed the header and first paragraph.
+    #[test]
+    fn nonhtml_marker_no_toc_in_page() {
+        let _ = env_logger::builder().is_test(true).try_init();
+
+        let marker = "[[_TOC_]]".to_owned();
+        let content = r#"# Chapter
+
+First paragraph
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1
+
+"#;
+
+        let expected = r#"# Chapter
+
+First paragraph
+
+# Header 1
+
+## Header 1.1
+
+# Header 2
+
+## Header 2.1
+
+## Header 2.2
+
+### Header 2.2.1"#;
+
+        assert_eq!(expected, add_toc(content, &with_marker(marker)).unwrap());
     }
 }
