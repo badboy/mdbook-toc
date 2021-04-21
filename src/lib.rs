@@ -184,7 +184,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             if let Some(level) = current_header_level.take() {
                 let header = current_header.clone();
                 let mut slug = mdbook::utils::normalize_id(&header);
-                let id_count = id_counter.entry(header.clone()).or_insert(0);
+                let id_count = id_counter.entry(slug.clone()).or_insert(0);
 
                 // Append unique ID if multiple headers with the same name exist
                 // to follow what mdBook does
@@ -756,5 +756,33 @@ First paragraph
 ### Header 2.2.1"#;
 
         assert_eq!(expected, add_toc(content, &with_marker(marker)).unwrap());
+    }
+
+    #[test]
+    fn similar_heading_different_casing() {
+        // Regression test #15
+        // Previously we didn't use the normalized header ("slug") to decide whether to use
+        // different link anchors.
+        //
+        let content = r#"# Chapter
+
+<!-- toc -->
+
+# Tag
+
+## tag
+
+"#;
+
+        let expected = r#"# Chapter
+
+* [Tag](#tag)
+  * [tag](#tag-1)
+
+# Tag
+
+## tag"#;
+
+        assert_eq!(expected, add_toc(content, &default()).unwrap());
     }
 }
