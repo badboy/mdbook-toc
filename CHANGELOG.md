@@ -1,3 +1,9 @@
+# v0.6.3 (2021-04-21)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.2...0.6.3)
+
+* Bugfix: Use slug (normalied header) to decide whether to use a different link anchor
+
 # v0.6.2 (2021-04-06)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.1...0.6.2)
