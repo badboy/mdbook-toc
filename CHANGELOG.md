@@ -1,3 +1,9 @@
+# v0.6.4 (2021-06-11)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.3...0.6.4)
+
+* Bump to mdbook v0.4.10
+
 # v0.6.3 (2021-04-21)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.2...0.6.3)
