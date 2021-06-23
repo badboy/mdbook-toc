@@ -15,8 +15,12 @@ pub struct Toc;
 
 static DEFAULT_MARKER: &str = "<!-- toc -->\n";
 
+/// Configuration for Table of Contents generation
 pub struct Config {
+    /// Marker to use, defaults to `<!-- toc -->\n`
     pub marker: String,
+    /// The maximum level of headers to include in the table of contents.
+    /// Defaults to `4`.
     pub max_level: u32,
 }
 
@@ -241,6 +245,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
 }
 
 impl Toc {
+    /// Add a table of contents to the given chapter.
     pub fn add_toc(chapter: &Chapter, cfg: &Config) -> Result<String> {
         add_toc(&chapter.content, cfg)
     }
