@@ -145,3 +145,8 @@ fn similar_heading_different_casing() {
 
     assert_toc!("similar_heading_different_casing");
 }
+
+#[test]
+fn tables_with_html() {
+    assert_toc!("tables_with_html");
+}
