@@ -1,3 +1,9 @@
+# v0.7.0 (2021-07-06)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.4...0.7.0)
+
+* Bump pulldown dependency to fix issue with table rendering
+
 # v0.6.4 (2021-06-11)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.3...0.6.4)
