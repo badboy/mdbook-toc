@@ -150,3 +150,10 @@ fn similar_heading_different_casing() {
 fn tables_with_html() {
     assert_toc!("tables_with_html");
 }
+
+#[test]
+fn backslash_escapes() {
+    // Regression test #21
+    // Backslash-escaped elements should still be escaped.
+    assert_toc!("backslash_escapes");
+}
