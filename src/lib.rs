@@ -8,7 +8,6 @@ use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::Tag::*;
 use pulldown_cmark::{Event, Options, Parser};
-use pulldown_cmark_to_cmark::{cmark_with_options, Options as COptions};
 use toml::value::Table;
 
 pub struct Toc;
@@ -110,6 +109,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     let mut toc_iter = toc.iter().peekable();
 
     // Start from the level of the first header.
+    let min_level = toc.iter().map(|(lvl, _, _)| *lvl).min().unwrap_or(1);
     let mut last_lower = match toc_iter.peek() {
         Some((lvl, _, _)) => *lvl,
         None => 0,
@@ -127,7 +127,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     });
 
     for (level, name, slug) in toc {
-        let width = 2 * (level - 1) as usize;
+        let width = 2 * (level - min_level) as usize;
         writeln!(result, "{1:0$}* [{2}](#{3})", width, "", name, slug).unwrap();
     }
 
@@ -135,7 +135,6 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
 }
 
 fn add_toc(content: &str, cfg: &Config) -> Result<String> {
-    let mut buf = String::with_capacity(content.len());
     let mut toc_found = false;
 
     let mut toc_content = vec![];
@@ -150,40 +149,41 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     opts.insert(Options::ENABLE_TASKLISTS);
 
     let mark: Vec<Event> = Parser::new(&cfg.marker).collect();
-    let mut mark_start = -1;
+    let mut mark_start = None;
+    let mut mark_end = 0..0;
     let mut mark_loc = 0;
-    let mut c = -1;
 
-    for e in Parser::new_ext(&content, opts) {
-        c += 1;
-        log::trace!("Event: {:?}", e);
+    for (e, span) in Parser::new_ext(&content, opts).into_offset_iter() {
+        log::trace!("Event: {:?} (span: {:?})", e, span);
         if !toc_found {
             log::trace!(
-                "TOC not found yet. Location: {}, Start: {}",
+                "TOC not found yet. Location: {}, Start: {:?}",
                 mark_loc,
                 mark_start
             );
             if e == mark[mark_loc] {
-                if mark_start == -1 {
-                    mark_start = c;
+                if mark_start.is_none() {
+                    mark_start = Some(span.clone());
                 }
                 mark_loc += 1;
                 if mark_loc >= mark.len() {
+                    mark_end = span;
                     toc_found = true
                 }
             } else if mark_loc > 0 {
                 mark_loc = 0;
-                mark_start = -1;
+                mark_start = None;
             } else {
                 continue;
             }
         }
 
-        if let Event::Start(Heading(lvl)) = e {
-            current_header_level = Some(lvl);
+        if let Event::Start(Heading(lvl, fragment, classes)) = e {
+            log::trace!("Header(lvl={lvl}, fragment={fragment:?}, classes={classes:?})");
+            current_header_level = Some(lvl as u32);
             continue;
         }
-        if let Event::End(Heading(_)) = e {
+        if let Event::End(Heading(..)) = e {
             // Skip if this header is nested too deeply.
             if let Some(level) = current_header_level.take() {
                 let header = current_header.clone();
@@ -219,29 +219,30 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
 
     let toc = build_toc(&toc_content);
     log::trace!("Built TOC: {:?}", toc);
-    let toc_events = Parser::new(&toc).collect::<Vec<_>>();
+    log::trace!("toc_found={toc_found} mark_start={mark_start:?} mark_end={mark_end:?}");
 
-    let mut c = -1;
-    let events = Parser::new_ext(&content, opts)
-        .map(|e| {
-            c += 1;
-            if toc_found && c > mark_start && c < mark_start + (mark.len() as i32) {
-                vec![]
-            } else if toc_found && c == mark_start {
-                toc_events.clone()
-            } else {
-                vec![e]
-            }
-        })
-        .flatten();
-
-    let opts = COptions {
-        newlines_after_codeblock: 1,
-        ..Default::default()
+    let content = if toc_found {
+        let mark_start = mark_start.unwrap();
+        let content_before_toc = &content[0..mark_start.start];
+        let content_after_toc = &content[mark_end.end..];
+        log::trace!("content_before_toc={:?}", content_before_toc);
+        log::trace!("content_after_toc={:?}", content_after_toc);
+        // Multiline markers might have consumed trailing newlines,
+        // we ensure there's always one before the content.
+        let extra = if content_after_toc.as_bytes()[0] == b'\n' {
+            ""
+        } else {
+            "\n"
+        };
+        format!(
+            "{}{}{}{}",
+            content_before_toc, toc, extra, content_after_toc
+        )
+    } else {
+        content.to_string()
     };
-    cmark_with_options(events, &mut buf, None, opts)
-        .map(|_| buf)
-        .map_err(|err| Error::msg(format!("Markdown serialization failed: {}", err)))
+
+    Ok(content)
 }
 
 impl Toc {

@@ -845,8 +845,7 @@ dependencies = [
  "log",
  "mdbook",
  "pretty_assertions",
- "pulldown-cmark 0.8.0",
- "pulldown-cmark-to-cmark",
+ "pulldown-cmark 0.9.1",
  "serde_json",
  "toml",
 ]
@@ -1205,23 +1204,14 @@ dependencies = [
 
 [[package]]
 name = "pulldown-cmark"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffade02495f22453cd593159ea2f59827aae7f53fa8323f756799b670881dcf8"
+checksum = "34f197a544b0c9ab3ae46c359a7ec9cbbb5c7bf97054266fecb7ead794a181d6"
 dependencies = [
  "bitflags",
  "getopts",
  "memchr",
  "unicase",
-]
-
-[[package]]
-name = "pulldown-cmark-to-cmark"
-version = "6.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95048382115a9da7be92ad51c84064d585b7da17472dcaa7f5eed8853c4c3707"
-dependencies = [
- "pulldown-cmark 0.8.0",
 ]
 
 [[package]]

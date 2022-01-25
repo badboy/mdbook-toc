@@ -13,5 +13,3 @@
 ##### Header 1.1.1.1.1
 
 # Another header `with inline` code
-
-
