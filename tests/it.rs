@@ -58,7 +58,7 @@ macro_rules! assert_toc {
         let chapter = Chapter::from_content(content);
         let result = Toc::add_toc(&chapter, &config);
         match result {
-            Ok(result) => assert_eq!(expected.trim_end(), result),
+            Ok(result) => assert_eq!(expected, result),
             Err(e) => panic!("{} failed. Error: {}", $name, e),
         }
     };
@@ -114,7 +114,7 @@ fn unique_slugs() {
 
 #[test]
 fn add_toc_with_github_marker() {
-    let marker = "* auto-gen TOC:\n{:toc}".to_owned();
+    let marker = "* auto-gen TOC:\n{:toc}\n".to_owned();
     assert_toc!("github_marker", with_marker(marker));
 }
 
@@ -149,4 +149,11 @@ fn similar_heading_different_casing() {
 #[test]
 fn tables_with_html() {
     assert_toc!("tables_with_html");
+}
+
+#[test]
+fn backslash_escapes() {
+    // Regression test #21
+    // Backslash-escaped elements should still be escaped.
+    assert_toc!("backslash_escapes");
 }
