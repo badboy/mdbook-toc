@@ -83,6 +83,76 @@ This can be configured in your `book.toml` as follows:
 max-level = 4
 ```
 
+
+### want make sidebar toc?
+
+If you want to make a sidebar toc, you may do like following
+
+If your page .md, you may put like this
+
+```
+# CloudShell
+
+<div class="bsmi-toc">
+
+
+<!-- toc -->
+
+
+
+</div>
+```
+
+See these `<div>` ? it is define a div container to mark a class id which may reference a css stylesheet . 
+
+and in your `book.toml`, you may add a additional css 
+
+```toml
+
+[output.html]
+additional-css=["toc.css"]
+```
+Create a `toc.css` file aside of `book.toml` with following css
+
+```css
+.bsmi-toc {
+    border: 1px solid #ccc;
+    float: right;
+    width: 340px;
+    min-height: 400px;
+    position: fixed;
+    right: 24px;
+    top: 110px;
+    background: #fff;
+    padding: 10px;
+    overflow: auto;
+    max-height: 800px
+}
+
+.bsmi-toc ul {
+    padding-left: 24px
+}
+
+.bsmi-toc h2 {
+    margin: 4px
+}
+
+.bsmi-toc li {
+    list-style-type: none
+}
+
+```
+
+and build your mdbook, view result.
+
+you may see preview like this:
+
+https://infobsmi.github.io/cloud-wills/tencent_cloud/cloudshell.html
+
+
+![image](https://user-images.githubusercontent.com/278153/183241122-ef07a3a4-830d-4742-9c08-907b41b6fee1.png)
+
+
 ## License
 
 MPL. See [LICENSE](LICENSE).  
