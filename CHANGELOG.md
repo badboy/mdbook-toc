@@ -1,3 +1,22 @@
+# v0.10.0 (2022-10-11)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.9.0...0.10.0)
+
+* Bump to mdbook 0.4.21
+* Dependency updates
+
+# v0.9.0 (2022-05-26)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.8.0...0.9.0)
+
+* Dependency updates
+
+# v0.8.0 (2022-01-26)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.7.0...0.8.0)
+
+* Avoid roundtripping through pulldown-cmark
+
 # v0.7.0 (2021-07-06)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.6.4...0.7.0)
