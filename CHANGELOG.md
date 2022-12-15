@@ -1,3 +1,9 @@
+# v0.11.0 (2022-12-15)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.10.0...0.11.0)
+
+* Upgrade dependencies
+
 # v0.10.0 (2022-10-11)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.9.0...0.10.0)
