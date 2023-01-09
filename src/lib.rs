@@ -229,7 +229,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         log::trace!("content_after_toc={:?}", content_after_toc);
         // Multiline markers might have consumed trailing newlines,
         // we ensure there's always one before the content.
-        let extra = if content_after_toc.as_bytes()[0] == b'\n' {
+        let extra = if content_after_toc.is_empty() || content_after_toc.as_bytes()[0] == b'\n' {
             ""
         } else {
             "\n"

@@ -157,3 +157,10 @@ fn backslash_escapes() {
     // Backslash-escaped elements should still be escaped.
     assert_toc!("backslash_escapes");
 }
+
+#[test]
+fn empty_document() {
+    // Regression test #31
+    // Empty documents should not fail
+    assert_toc!("empty_document");
+}
