@@ -12,11 +12,11 @@ use toml::value::Table;
 
 pub struct Toc;
 
-static DEFAULT_MARKER: &str = "<!-- toc -->\n";
+static DEFAULT_MARKER: &str = "<!-- toc -->";
 
 /// Configuration for Table of Contents generation
 pub struct Config {
-    /// Marker to use, defaults to `<!-- toc -->\n`
+    /// Marker to use, defaults to `<!-- toc -->`
     pub marker: String,
     /// The maximum level of headers to include in the table of contents.
     /// Defaults to `4`.
