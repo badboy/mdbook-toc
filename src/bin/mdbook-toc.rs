@@ -55,7 +55,7 @@ fn handle_supports(sub_args: &ArgMatches) -> ! {
     let renderer = sub_args
         .get_one::<String>("renderer")
         .expect("Required argument");
-    let supported = Toc.supports_renderer(&renderer);
+    let supported = Toc.supports_renderer(renderer);
 
     // Signal whether the renderer is supported by exiting with 1 or 0.
     if supported {
