@@ -1,3 +1,9 @@
+# v0.12.0 (2023-05-15)
+
+[Full changelog](https://github.com/badboy/mdbook-toc/compare/0.11.2...0.12.0)
+
+* Normalize to LF line endings so that the default marker works on CRLF documents
+
 # v0.11.2 (2023-02-14)
 
 [Full changelog](https://github.com/badboy/mdbook-toc/compare/0.11.1...0.11.2)
