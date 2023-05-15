@@ -164,3 +164,8 @@ fn empty_document() {
     // Empty documents should not fail
     assert_toc!("empty_document");
 }
+
+#[test]
+fn crlf() {
+    assert_toc!("crlf");
+}

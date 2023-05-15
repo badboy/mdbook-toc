@@ -149,10 +149,12 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     opts.insert(Options::ENABLE_TASKLISTS);
 
     let mark: Vec<Event> = Parser::new(&cfg.marker).collect();
+    log::trace!("Marker: {:?}", mark);
     let mut mark_start = None;
     let mut mark_end = 0..0;
     let mut mark_loc = 0;
 
+    let content = content.replace("\r\n", "\n");
     for (e, span) in Parser::new_ext(&content, opts).into_offset_iter() {
         log::trace!("Event: {:?} (span: {:?})", e, span);
         if !toc_found {
