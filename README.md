@@ -4,13 +4,13 @@ A preprocessor for [mdbook][] to add inline Table of Contents support.
 
 [mdbook]: https://github.com/rust-lang-nursery/mdBook
 
-It turns this:
+It turns this marker:
 
 ```md
 <!-- toc -->
 ```
 
-into a Table of Contents based on all top- and second-level headings of the chapter.
+into a Table of Contents based on headings of the chapter following the marker.
 
 ## Installation
 
