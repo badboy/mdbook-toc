@@ -7,15 +7,17 @@ fn default<T: Default>() -> T {
 }
 
 fn with_marker<S: Into<String>>(marker: S) -> Config {
-    let mut cfg = Config::default();
-    cfg.marker = marker.into();
-    cfg
+    Config {
+        marker: marker.into(),
+        ..Config::default()
+    }
 }
 
 fn with_max_level(level: u32) -> Config {
-    let mut cfg = Config::default();
-    cfg.max_level = level;
-    cfg
+    Config {
+        max_level: level,
+        ..Config::default()
+    }
 }
 
 trait FromContent {
@@ -168,4 +170,9 @@ fn empty_document() {
 #[test]
 fn crlf() {
     assert_toc!("crlf");
+}
+
+#[test]
+fn attributes() {
+    assert_toc!("attributes");
 }
