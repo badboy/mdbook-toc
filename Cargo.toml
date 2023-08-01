@@ -7,7 +7,7 @@ license = "MPL-2.0"
 homepage = "https://github.com/badboy/mdbook-toc"
 repository = "https://github.com/badboy/mdbook-toc"
 edition = "2018"
-rust-version = "1.58"
+rust-version = "1.66"
 
 [dependencies]
 mdbook = "0.4.32"
