@@ -47,8 +47,7 @@ impl<'a> TryFrom<Option<&'a Table>> for Config {
                 Some(m) => m,
                 None => {
                     return Err(Error::msg(format!(
-                        "Marker {:?} is not a valid string",
-                        marker
+                        "Marker {marker:?} is not a valid string",
                     )))
                 }
             };
@@ -60,8 +59,7 @@ impl<'a> TryFrom<Option<&'a Table>> for Config {
                 Some(l) => l,
                 None => {
                     return Err(Error::msg(format!(
-                        "Level {:?} is not a valid integer",
-                        level
+                        "Level {level:?} is not a valid integer",
                     )))
                 }
             };
@@ -98,7 +96,7 @@ impl Preprocessor for Toc {
 }
 
 fn build_toc(toc: &[(u32, String, String)]) -> String {
-    log::trace!("ToC from {:?}", toc);
+    log::trace!("ToC from {toc:?}");
     let mut result = String::new();
 
     // "Normalize" header levels.
@@ -128,7 +126,7 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
 
     for (level, name, slug) in toc {
         let width = 2 * (level - min_level) as usize;
-        writeln!(result, "{1:0$}* [{2}](#{3})", width, "", name, slug).unwrap();
+        writeln!(result, "{:width$}* [{name}](#{slug})", "").unwrap();
     }
 
     result
@@ -149,20 +147,16 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     opts.insert(Options::ENABLE_TASKLISTS);
 
     let mark: Vec<Event> = Parser::new(&cfg.marker).collect();
-    log::trace!("Marker: {:?}", mark);
+    log::trace!("Marker: {mark:?}");
     let mut mark_start = None;
     let mut mark_end = 0..0;
     let mut mark_loc = 0;
 
     let content = content.replace("\r\n", "\n");
     for (e, span) in Parser::new_ext(&content, opts).into_offset_iter() {
-        log::trace!("Event: {:?} (span: {:?})", e, span);
+        log::trace!("Event: {e:?} (span: {span:?})");
         if !toc_found {
-            log::trace!(
-                "TOC not found yet. Location: {}, Start: {:?}",
-                mark_loc,
-                mark_start
-            );
+            log::trace!("TOC not found yet. Location: {mark_loc}, Start: {mark_start:?}");
             if e == mark[mark_loc] {
                 if mark_start.is_none() {
                     mark_start = Some(span.clone());
@@ -195,7 +189,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                 // Append unique ID if multiple headers with the same name exist
                 // to follow what mdBook does
                 if *id_count > 0 {
-                    write!(slug, "-{}", id_count).unwrap();
+                    write!(slug, "-{id_count}").unwrap();
                 }
 
                 *id_count += 1;
@@ -213,22 +207,22 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         }
 
         match e {
-            Event::Text(header) => write!(current_header, "{}", header).unwrap(),
-            Event::Code(code) => write!(current_header, "`{}`", code).unwrap(),
+            Event::Text(header) => write!(current_header, "{header}").unwrap(),
+            Event::Code(code) => write!(current_header, "`{code}`").unwrap(),
             _ => {} // Rest is unhandled
         }
     }
 
     let toc = build_toc(&toc_content);
-    log::trace!("Built TOC: {:?}", toc);
+    log::trace!("Built TOC: {toc:?}");
     log::trace!("toc_found={toc_found} mark_start={mark_start:?} mark_end={mark_end:?}");
 
     let content = if toc_found {
         let mark_start = mark_start.unwrap();
         let content_before_toc = &content[0..mark_start.start];
         let content_after_toc = &content[mark_end.end..];
-        log::trace!("content_before_toc={:?}", content_before_toc);
-        log::trace!("content_after_toc={:?}", content_after_toc);
+        log::trace!("content_before_toc={content_before_toc:?}");
+        log::trace!("content_after_toc={content_after_toc:?}");
         // Multiline markers might have consumed trailing newlines,
         // we ensure there's always one before the content.
         let extra = if content_after_toc.is_empty() || content_after_toc.as_bytes()[0] == b'\n' {
@@ -236,10 +230,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         } else {
             "\n"
         };
-        format!(
-            "{}{}{}{}",
-            content_before_toc, toc, extra, content_after_toc
-        )
+        format!("{content_before_toc}{toc}{extra}{content_after_toc}")
     } else {
         content.to_string()
     };
