@@ -140,11 +140,11 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut current_header_level: Option<u32> = None;
     let mut id_counter = HashMap::new();
 
-    let mut opts = Options::empty();
-    opts.insert(Options::ENABLE_TABLES);
-    opts.insert(Options::ENABLE_FOOTNOTES);
-    opts.insert(Options::ENABLE_STRIKETHROUGH);
-    opts.insert(Options::ENABLE_TASKLISTS);
+    let opts = Options::ENABLE_TABLES
+        | Options::ENABLE_FOOTNOTES
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_HEADING_ATTRIBUTES;
 
     let mark: Vec<Event> = Parser::new(&cfg.marker).collect();
     log::trace!("Marker: {mark:?}");
@@ -179,20 +179,27 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             current_header_level = Some(lvl as u32);
             continue;
         }
-        if let Event::End(Heading(..)) = e {
+        if let Event::End(Heading(_, fragment, _)) = e {
             // Skip if this header is nested too deeply.
             if let Some(level) = current_header_level.take() {
                 let header = current_header.clone();
-                let mut slug = mdbook::utils::normalize_id(&header);
-                let id_count = id_counter.entry(slug.clone()).or_insert(0);
+                let slug = if let Some(slug) = fragment {
+                    // If a fragment is defined, take it as is, not trying to append an extra ID
+                    // in case of duplicates (same behavior as mdBook)
+                    slug.to_owned()
+                } else {
+                    let mut slug = mdbook::utils::normalize_id(&header);
+                    let id_count = id_counter.entry(slug.clone()).or_insert(0);
 
-                // Append unique ID if multiple headers with the same name exist
-                // to follow what mdBook does
-                if *id_count > 0 {
-                    write!(slug, "-{id_count}").unwrap();
-                }
+                    // Append unique ID if multiple headers with the same name exist
+                    // to follow what mdBook does
+                    if *id_count > 0 {
+                        write!(slug, "-{id_count}").unwrap();
+                    }
 
-                *id_count += 1;
+                    *id_count += 1;
+                    slug
+                };
 
                 if level <= cfg.max_level {
                     toc_content.push((level, header, slug));
