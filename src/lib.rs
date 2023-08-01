@@ -200,7 +200,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                     // Append unique ID if multiple headers with the same name exist
                     // to follow what mdBook does
                     if *id_count > 0 {
-                        write!(slug, "-{}", id_count).unwrap();
+                        write!(slug, "-{id_count}").unwrap();
                     }
 
                     *id_count += 1;
