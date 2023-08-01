@@ -30,7 +30,7 @@ fn main() {
     if let Some(Cmd::Supports { renderer }) = app.cmd {
         handle_supports(&renderer);
     } else if let Err(e) = handle_preprocessing() {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         process::exit(1);
     }
 }
