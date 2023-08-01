@@ -3,7 +3,7 @@ extern crate mdbook;
 extern crate mdbook_toc;
 extern crate serde_json;
 
-use clap::{crate_version, Arg, ArgMatches, Command};
+use clap::{Parser, Subcommand};
 use mdbook::errors::Error;
 use mdbook::preprocess::{CmdPreprocessor, Preprocessor};
 use mdbook_toc::Toc;
@@ -11,24 +11,26 @@ use mdbook_toc::Toc;
 use std::io;
 use std::process;
 
-pub fn make_app() -> Command {
-    Command::new("mdbook-toc")
-        .version(crate_version!())
-        .about("mdbook preprocessor to add Table of Contents")
-        .subcommand(
-            Command::new("supports")
-                .arg(Arg::new("renderer").required(true))
-                .about("Check whether a renderer is supported by this preprocessor"),
-        )
+#[derive(Parser)]
+#[command(about, version)]
+struct App {
+    #[command(subcommand)]
+    cmd: Option<Cmd>,
+}
+
+#[derive(Subcommand)]
+enum Cmd {
+    /// Check whether a renderer is supported by this preprocessor
+    Supports { renderer: String },
 }
 
 fn main() {
-    let matches = make_app().get_matches();
+    let app = App::parse();
 
-    if let Some(sub_args) = matches.subcommand_matches("supports") {
-        handle_supports(sub_args);
+    if let Some(Cmd::Supports { renderer }) = app.cmd {
+        handle_supports(&renderer);
     } else if let Err(e) = handle_preprocessing() {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         process::exit(1);
     }
 }
@@ -51,10 +53,7 @@ fn handle_preprocessing() -> Result<(), Error> {
     Ok(())
 }
 
-fn handle_supports(sub_args: &ArgMatches) -> ! {
-    let renderer = sub_args
-        .get_one::<String>("renderer")
-        .expect("Required argument");
+fn handle_supports(renderer: &str) -> ! {
     let supported = Toc.supports_renderer(renderer);
 
     // Signal whether the renderer is supported by exiting with 1 or 0.
