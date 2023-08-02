@@ -1,3 +1,8 @@
+# v0.14.0 (2023-08-02)
+
+* Use custom header IDs if present
+* Upgrade dependencies
+
 # v0.13.0 (2023-07-18)
 
 * Upgrade dependencies
