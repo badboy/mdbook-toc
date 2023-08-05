@@ -1,3 +1,7 @@
+# v0.14.1 (2023-08-05)
+
+* Upgrade mdbook and downgrade toml
+
 # v0.14.0 (2023-08-02)
 
 * Use custom header IDs if present
