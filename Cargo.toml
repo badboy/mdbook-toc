@@ -10,7 +10,7 @@ edition = "2018"
 rust-version = "1.66"
 
 [dependencies]
-mdbook = "0.4.33"
+mdbook = "0.4.35"
 pulldown-cmark = "0.9.3"
 log = "0.4.19"
 clap = { version = "4.3.19", features = ["cargo", "derive"] }
