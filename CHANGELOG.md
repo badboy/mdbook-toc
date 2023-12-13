@@ -1,3 +1,7 @@
+# v0.14.2 (2023-12-13)
+
+* Upgrade mdbook
+
 # v0.14.1 (2023-08-05)
 
 * Upgrade mdbook and downgrade toml
