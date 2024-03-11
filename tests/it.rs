@@ -176,3 +176,8 @@ fn crlf() {
 fn attributes() {
     assert_toc!("attributes");
 }
+
+#[test]
+fn mathjax() {
+    assert_toc!("mathjax");
+}
