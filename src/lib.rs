@@ -154,7 +154,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
 
     let content = content.replace("\r\n", "\n");
     for (e, span) in Parser::new_ext(&content, opts).into_offset_iter() {
-        log::trace!("Event: {e:?} (span: {span:?})");
+        log::trace!("Event: {e:?} (span: {span:?}, content: {:?})", &content[span.start..span.end]);
         if !toc_found {
             log::trace!("TOC not found yet. Location: {mark_loc}, Start: {mark_start:?}");
             if e == mark[mark_loc] {
@@ -163,7 +163,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                 }
                 mark_loc += 1;
                 if mark_loc >= mark.len() {
-                    mark_end = span;
+                    mark_end = span.clone();
                     toc_found = true
                 }
             } else if mark_loc > 0 {
@@ -179,6 +179,13 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             log::trace!("Header(lvl={level}, fragment={id:?})");
             let id = id.map(|s| s.to_string());
             current_header_level = Some((level as u32, id));
+
+            let mut header_content = content[span.start..span.end].trim_end();
+            let idx = header_content.find(|c: char| c != '#' && !c.is_whitespace());
+            if let Some(idx) = idx {
+                header_content = &header_content[idx..];
+            }
+            current_header = header_content.to_string();
             continue;
         }
         if let Event::End(TagEnd::Heading(header_lvl)) = e {
@@ -214,12 +221,6 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         }
         if current_header_level.is_none() {
             continue;
-        }
-
-        match e {
-            Event::Text(header) => write!(current_header, "{header}").unwrap(),
-            Event::Code(code) => write!(current_header, "`{code}`").unwrap(),
-            _ => {} // Rest is unhandled
         }
     }
 
