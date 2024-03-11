@@ -6,7 +6,7 @@ use std::fmt::Write;
 use mdbook::book::{Book, BookItem, Chapter};
 use mdbook::errors::{Error, Result};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
-use pulldown_cmark::Tag::*;
+use pulldown_cmark::{Tag::*, TagEnd};
 use pulldown_cmark::{Event, Options, Parser};
 use toml::value::Table;
 
@@ -137,7 +137,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
 
     let mut toc_content = vec![];
     let mut current_header = String::new();
-    let mut current_header_level: Option<u32> = None;
+    let mut current_header_level: Option<(u32, Option<String>)> = None;
     let mut id_counter = HashMap::new();
 
     let opts = Options::ENABLE_TABLES
@@ -173,17 +173,20 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                 continue;
             }
         }
+        log::trace!("TOC found. Location: {mark_loc}, Start: {mark_start:?}");
 
-        if let Event::Start(Heading(lvl, fragment, classes)) = e {
-            log::trace!("Header(lvl={lvl}, fragment={fragment:?}, classes={classes:?})");
-            current_header_level = Some(lvl as u32);
+        if let Event::Start(Heading { level, id, ..}) = e {
+            log::trace!("Header(lvl={level}, fragment={id:?})");
+            let id = id.map(|s| s.to_string());
+            current_header_level = Some((level as u32, id));
             continue;
         }
-        if let Event::End(Heading(_, fragment, _)) = e {
+        if let Event::End(TagEnd::Heading(header_lvl)) = e {
             // Skip if this header is nested too deeply.
-            if let Some(level) = current_header_level.take() {
+            if let Some((level, id)) = current_header_level.take() {
+                assert!(header_lvl as u32 == level);
                 let header = current_header.clone();
-                let slug = if let Some(slug) = fragment {
+                let slug = if let Some(slug) = id {
                     // If a fragment is defined, take it as is, not trying to append an extra ID
                     // in case of duplicates (same behavior as mdBook)
                     slug.to_owned()
