@@ -126,11 +126,13 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
 
     for (level, name, slug) in toc {
         let width = 2 * (level - min_level) as usize;
-        writeln!(result, "{:width$}* [{name}](#{slug})", "").unwrap();
+        let escaped_name = name.replace("<", "\\<").replace(">", "\\>");
+        writeln!(result, "{:width$}* [{name}](#{slug})", "", name = escaped_name, width = width).unwrap();
     }
 
     result
 }
+
 
 fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut toc_found = false;
