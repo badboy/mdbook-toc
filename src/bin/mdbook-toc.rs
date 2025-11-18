@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use mdbook_preprocessor::errors::Error;
 use mdbook_preprocessor::Preprocessor;
+use mdbook_preprocessor::errors::Error;
 use mdbook_toc::Toc;
 
 use std::io;
