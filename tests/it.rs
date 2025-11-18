@@ -1,4 +1,4 @@
-use mdbook::book::Chapter;
+use mdbook_preprocessor::book::Chapter;
 use mdbook_toc::{Config, Toc};
 use pretty_assertions::assert_eq;
 

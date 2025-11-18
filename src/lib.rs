@@ -1,18 +1,17 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::fmt::Write;
 
-use mdbook::book::{Book, BookItem, Chapter};
-use mdbook::errors::{Error, Result};
-use mdbook::preprocess::{Preprocessor, PreprocessorContext};
-use pulldown_cmark::{Tag::*, TagEnd};
+use mdbook_preprocessor::book::{Book, BookItem, Chapter};
+use mdbook_preprocessor::errors::Result;
+use mdbook_preprocessor::{Preprocessor, PreprocessorContext};
 use pulldown_cmark::{Event, Options, Parser};
-use toml::value::Table;
+use pulldown_cmark::{Tag::*, TagEnd};
 
 pub struct Toc;
 
 static DEFAULT_MARKER: &str = "<!-- toc -->\n";
+static DEFAULT_MAX_LEVEL: u32 = 4;
 
 /// Configuration for Table of Contents generation
 pub struct Config {
@@ -27,46 +26,8 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             marker: DEFAULT_MARKER.into(),
-            max_level: 4,
+            max_level: DEFAULT_MAX_LEVEL,
         }
-    }
-}
-
-impl<'a> TryFrom<Option<&'a Table>> for Config {
-    type Error = Error;
-
-    fn try_from(mdbook_cfg: Option<&Table>) -> Result<Config> {
-        let mut cfg = Config::default();
-        let mdbook_cfg = match mdbook_cfg {
-            Some(c) => c,
-            None => return Ok(cfg),
-        };
-
-        if let Some(marker) = mdbook_cfg.get("marker") {
-            let marker = match marker.as_str() {
-                Some(m) => m,
-                None => {
-                    return Err(Error::msg(format!(
-                        "Marker {marker:?} is not a valid string",
-                    )))
-                }
-            };
-            cfg.marker = marker.into();
-        }
-
-        if let Some(level) = mdbook_cfg.get("max-level") {
-            let level = match level.as_integer() {
-                Some(l) => l,
-                None => {
-                    return Err(Error::msg(format!(
-                        "Level {level:?} is not a valid integer",
-                    )))
-                }
-            };
-            cfg.max_level = level.try_into()?;
-        }
-
-        Ok(cfg)
     }
 }
 
@@ -77,7 +38,14 @@ impl Preprocessor for Toc {
 
     fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book> {
         let mut res = None;
-        let cfg = ctx.config.get_preprocessor(self.name()).try_into()?;
+        let cfg_key = |key| format!("preprocessor.{}.{}", self.name(), key);
+        let cfg = Config {
+            marker: ctx
+                .config
+                .get(&cfg_key("marker"))?
+                .unwrap_or_else(|| DEFAULT_MARKER.into()),
+            max_level: ctx.config.get(&cfg_key("marker"))?.unwrap_or(DEFAULT_MAX_LEVEL),
+        };
 
         book.for_each_mut(|item: &mut BookItem| {
             if let Some(Err(_)) = res {
@@ -132,6 +100,23 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
     result
 }
 
+/// Convert the given string to a valid HTML element ID.
+/// The only restriction is that the ID must not contain any ASCII whitespace.
+fn normalize_id(content: &str) -> String {
+    content
+        .chars()
+        .filter_map(|ch| {
+            if ch.is_alphanumeric() || ch == '_' || ch == '-' {
+                Some(ch.to_ascii_lowercase())
+            } else if ch.is_whitespace() {
+                Some('-')
+            } else {
+                None
+            }
+        })
+        .collect::<String>()
+}
+
 fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut toc_found = false;
 
@@ -154,7 +139,10 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
 
     let content = content.replace("\r\n", "\n");
     for (e, span) in Parser::new_ext(&content, opts).into_offset_iter() {
-        log::trace!("Event: {e:?} (span: {span:?}, content: {:?})", &content[span.start..span.end]);
+        log::trace!(
+            "Event: {e:?} (span: {span:?}, content: {:?})",
+            &content[span.start..span.end]
+        );
         if !toc_found {
             log::trace!("TOC not found yet. Location: {mark_loc}, Start: {mark_start:?}");
             if e == mark[mark_loc] {
@@ -175,7 +163,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         }
         log::trace!("TOC found. Location: {mark_loc}, Start: {mark_start:?}");
 
-        if let Event::Start(Heading { level, id, ..}) = e {
+        if let Event::Start(Heading { level, id, .. }) = e {
             log::trace!("Header(lvl={level}, fragment={id:?})");
             let id = id.map(|s| s.to_string());
             current_header_level = Some((level as u32, id));
@@ -198,7 +186,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                     // in case of duplicates (same behavior as mdBook)
                     slug.to_owned()
                 } else {
-                    let mut slug = mdbook::utils::normalize_id(&header);
+                    let mut slug = normalize_id(&header);
                     let id_count = id_counter.entry(slug.clone()).or_insert(0);
 
                     // Append unique ID if multiple headers with the same name exist
