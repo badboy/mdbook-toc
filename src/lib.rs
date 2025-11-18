@@ -121,7 +121,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header = String::new();
+    let mut current_header = None;
     let mut current_header_level: Option<(u32, Option<String>)> = None;
     let mut id_counter = HashMap::new();
 
@@ -168,19 +168,33 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             let id = id.map(|s| s.to_string());
             current_header_level = Some((level as u32, id));
 
-            let mut header_content = content[span.start..span.end].trim_end();
-            let idx = header_content.find(|c: char| c != '#' && !c.is_whitespace());
-            if let Some(idx) = idx {
-                header_content = &header_content[idx..];
-            }
-            current_header = header_content.to_string();
+            // Find start of the header after `#`
+            let header_content = content[span.start..span.end].trim_end();
+            let idx = header_content.find(|c: char| c != '#' && !c.is_ascii_whitespace());
+            current_header = Some((span.start + idx.unwrap_or(0), 0));
             continue;
+        }
+        // Headers might consist of text and code. pulldown_cmark unescapes `\\`, so we try to find
+        // the correct span and extract the text ourselves later.
+        // We enabled `HEADING_ATTRIBUTES` so attributes within `{ }` won't be in the emitted event
+        if let Some(current_header) = &mut current_header {
+            if let Event::Text(_) = &e {
+                if span.end > current_header.1 {
+                    current_header.1 = span.end;
+                }
+            }
+            if let Event::Code(_) = &e {
+                if span.end > current_header.1 {
+                    current_header.1 = span.end;
+                }
+            }
         }
         if let Event::End(TagEnd::Heading(header_lvl)) = e {
             // Skip if this header is nested too deeply.
             if let Some((level, id)) = current_header_level.take() {
                 assert!(header_lvl as u32 == level);
-                let header = current_header.clone();
+                let header_span = current_header.take().unwrap();
+                let header = content[header_span.0..header_span.1].trim_end();
                 let slug = if let Some(slug) = id {
                     // If a fragment is defined, take it as is, not trying to append an extra ID
                     // in case of duplicates (same behavior as mdBook)
@@ -200,10 +214,8 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                 };
 
                 if level <= cfg.max_level {
-                    toc_content.push((level, header, slug));
+                    toc_content.push((level, header.to_string(), slug));
                 }
-
-                current_header.clear();
             }
             continue;
         }
