@@ -181,3 +181,8 @@ fn attributes() {
 fn mathjax() {
     assert_toc!("mathjax");
 }
+
+#[test]
+fn escaped_brackets() {
+    assert_toc!("escaped_brackets");
+}
