@@ -44,7 +44,10 @@ impl Preprocessor for Toc {
                 .config
                 .get(&cfg_key("marker"))?
                 .unwrap_or_else(|| DEFAULT_MARKER.into()),
-            max_level: ctx.config.get(&cfg_key("marker"))?.unwrap_or(DEFAULT_MAX_LEVEL),
+            max_level: ctx
+                .config
+                .get(&cfg_key("max_level"))?
+                .unwrap_or(DEFAULT_MAX_LEVEL),
         };
 
         book.for_each_mut(|item: &mut BookItem| {
