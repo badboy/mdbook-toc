@@ -181,15 +181,15 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         // the correct span and extract the text ourselves later.
         // We enabled `HEADING_ATTRIBUTES` so attributes within `{ }` won't be in the emitted event
         if let Some(current_header) = &mut current_header {
-            if let Event::Text(_) = &e {
-                if span.end > current_header.1 {
-                    current_header.1 = span.end;
-                }
+            if let Event::Text(_) = &e
+                && span.end > current_header.1
+            {
+                current_header.1 = span.end;
             }
-            if let Event::Code(_) = &e {
-                if span.end > current_header.1 {
-                    current_header.1 = span.end;
-                }
+            if let Event::Code(_) = &e
+                && span.end > current_header.1
+            {
+                current_header.1 = span.end;
             }
         }
         if let Event::End(TagEnd::Heading(header_lvl)) = e {
@@ -203,7 +203,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
                     // in case of duplicates (same behavior as mdBook)
                     slug.to_owned()
                 } else {
-                    let mut slug = normalize_id(&header);
+                    let mut slug = normalize_id(header);
                     let id_count = id_counter.entry(slug.clone()).or_insert(0);
 
                     // Append unique ID if multiple headers with the same name exist
