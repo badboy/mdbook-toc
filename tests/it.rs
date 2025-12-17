@@ -186,3 +186,8 @@ fn mathjax() {
 fn escaped_brackets() {
     assert_toc!("escaped_brackets");
 }
+
+#[test]
+fn umlaute() {
+    assert_toc!("umlaute");
+}

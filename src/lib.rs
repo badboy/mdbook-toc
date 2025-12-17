@@ -107,10 +107,12 @@ fn build_toc(toc: &[(u32, String, String)]) -> String {
 /// The only restriction is that the ID must not contain any ASCII whitespace.
 fn normalize_id(content: &str) -> String {
     content
+        .trim()
+        .to_lowercase()
         .chars()
         .filter_map(|ch| {
             if ch.is_alphanumeric() || ch == '_' || ch == '-' {
-                Some(ch.to_ascii_lowercase())
+                Some(ch)
             } else if ch.is_whitespace() {
                 Some('-')
             } else {
