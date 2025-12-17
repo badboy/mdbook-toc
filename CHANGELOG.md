@@ -1,3 +1,12 @@
+# v0.15.2 (2025-12-17)
+
+* Fix id normalization for anchor references: Correctly lowercase before normalizing
+
+# v0.15.1 (2025-11-19)
+
+* Update to mdbook v0.5
+* Extract the correct header content even with inline code samples or other formatting
+
 # v0.14.2 (2023-12-13)
 
 * Upgrade mdbook
