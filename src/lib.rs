@@ -126,7 +126,7 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
     let mut toc_found = false;
 
     let mut toc_content = vec![];
-    let mut current_header = None;
+    let mut current_header: Option<(usize, Option<usize>)> = None;
     let mut current_header_level: Option<(u32, Option<String>)> = None;
     let mut id_counter = HashMap::new();
 
@@ -176,22 +176,15 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             // Find start of the header after `#`
             let header_content = content[span.start..span.end].trim_end();
             let idx = header_content.find(|c: char| c != '#' && !c.is_ascii_whitespace());
-            current_header = Some((span.start + idx.unwrap_or(0), 0));
+            current_header = Some((span.start + idx.unwrap_or(0), None));
             continue;
         }
         // Headers might consist of text and code. pulldown_cmark unescapes `\\`, so we try to find
         // the correct span and extract the text ourselves later.
         // We enabled `HEADING_ATTRIBUTES` so attributes within `{ }` won't be in the emitted event
-        if let Some(current_header) = &mut current_header {
-            if let Event::Text(_) = &e
-                && span.end > current_header.1
-            {
-                current_header.1 = span.end;
-            }
-            if let Event::Code(_) = &e
-                && span.end > current_header.1
-            {
-                current_header.1 = span.end;
+        if let Some(ref mut hdr) = current_header {
+            if let Event::Text(_) | Event::Code(_) = &e {
+                hdr.1 = Some(hdr.1.map_or(span.end, |end| end.max(span.end)));
             }
         }
         if let Event::End(TagEnd::Heading(header_lvl)) = e {
@@ -199,7 +192,14 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
             if let Some((level, id)) = current_header_level.take() {
                 assert!(header_lvl as u32 == level);
                 let header_span = current_header.take().unwrap();
-                let header = content[header_span.0..header_span.1].trim_end();
+                // Skip headers with no extractable text content
+                let Some(end) = header_span.1 else {
+                    continue;
+                };
+                if header_span.0 >= end {
+                    continue;
+                }
+                let header = content[header_span.0..end].trim_end();
                 let slug = if let Some(slug) = id {
                     // If a fragment is defined, take it as is, not trying to append an extra ID
                     // in case of duplicates (same behavior as mdBook)

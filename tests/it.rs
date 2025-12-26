@@ -191,3 +191,10 @@ fn escaped_brackets() {
 fn umlaute() {
     assert_toc!("umlaute");
 }
+
+#[test]
+fn header_with_only_attributes() {
+    // Regression test for headers containing only attributes (e.g., `# {#custom-id}`).
+    // These should be skipped in the TOC without causing a panic.
+    assert_toc!("header_with_only_attributes");
+}
