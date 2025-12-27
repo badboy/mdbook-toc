@@ -182,11 +182,10 @@ fn add_toc(content: &str, cfg: &Config) -> Result<String> {
         // Headers might consist of text and code. pulldown_cmark unescapes `\\`, so we try to find
         // the correct span and extract the text ourselves later.
         // We enabled `HEADING_ATTRIBUTES` so attributes within `{ }` won't be in the emitted event
-        if let Some(ref mut hdr) = current_header {
-            if let Event::Text(_) | Event::Code(_) = &e {
+        if let Some(ref mut hdr) = current_header
+            && let Event::Text(_) | Event::Code(_) = &e {
                 hdr.1 = Some(hdr.1.map_or(span.end, |end| end.max(span.end)));
             }
-        }
         if let Event::End(TagEnd::Heading(header_lvl)) = e {
             // Skip if this header is nested too deeply.
             if let Some((level, id)) = current_header_level.take() {
