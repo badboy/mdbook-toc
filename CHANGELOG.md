@@ -1,3 +1,7 @@
+# v0.15.3 (2026-01-14)
+
+* Correctly extract text from headers, stripping formatting/links/code tags
+
 # v0.15.2 (2025-12-17)
 
 * Fix id normalization for anchor references: Correctly lowercase before normalizing
