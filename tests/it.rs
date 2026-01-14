@@ -198,3 +198,8 @@ fn header_with_only_attributes() {
     // These should be skipped in the TOC without causing a panic.
     assert_toc!("header_with_only_attributes");
 }
+
+#[test]
+fn link_in_header() {
+    assert_toc!("link_in_header");
+}
