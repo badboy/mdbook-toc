@@ -1,3 +1,7 @@
+# v0.15.4 (2026-05-28)
+
+* Use the correct spelling of the documented configuration option: max-level
+
 # v0.15.3 (2026-01-14)
 
 * Correctly extract text from headers, stripping formatting/links/code tags
