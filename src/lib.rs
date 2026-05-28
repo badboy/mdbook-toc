@@ -46,7 +46,7 @@ impl Preprocessor for Toc {
                 .unwrap_or_else(|| DEFAULT_MARKER.into()),
             max_level: ctx
                 .config
-                .get(&cfg_key("max_level"))?
+                .get(&cfg_key("max-level"))?
                 .unwrap_or(DEFAULT_MAX_LEVEL),
         };
 
