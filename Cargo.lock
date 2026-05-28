@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "mdbook-toc"
-version = "0.15.3"
+version = "0.15.4"
 dependencies = [
  "clap",
  "env_logger",
